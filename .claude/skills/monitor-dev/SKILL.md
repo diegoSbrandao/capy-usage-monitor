@@ -6,29 +6,61 @@ description: Use ao trabalhar no projeto capy-usage-monitor (adicionar features,
 # Capy Usage Monitor — guia de manutenção
 
 Widget Electron que le os transcripts locais do Claude Code
-(`~/.claude/projects/**/*.jsonl`) e mostra consumo de tokens com uma
-capivara mascote. Sem rede, sem OAuth — de proposito (veja README.md, secao
+(`~/.claude/projects/**/*.jsonl`) e mostra consumo de tokens com um
+personagem faisca (paleta de cores do Claude, forma original — nao é o
+logo oficial). Sem rede, sem OAuth — de proposito (veja README.md, secao
 "Por que é diferente").
 
 ## Onde fica cada coisa
 
-- `usage.js` — toda a logica de leitura/agregação de tokens. Zero
+- `usage.js` — toda a logica de leitura/agregação de tokens, incluindo
+  `getLastActivityMs()` (timestamp da ultima mensagem assistant nas
+  ultimas 24h, usado pra decidir se o personagem esta ativo). Zero
   dependencia do Electron, roda isolado com `node usage.js` (imprime um
   snapshot JSON). Sempre valide mudanças aqui rodando esse comando antes de
   integrar no app.
+- `activity.js` — duas funcoes puras. `computeState({lastActivityMs, now,
+  workingMs, lightMs})` decide `working | light | idle` a partir de ha
+  quanto tempo veio a ultima atividade. `categorizeTool(name)` mapeia o
+  nome de uma tool_use (`Read`, `Edit`, `Bash`, etc.) pra uma categoria de
+  animação (`read | edit | run | other`). Ambas testaveis isolado com
+  `node activity.js` (bateria de casos de borda embutida). Os estados
+  `hot` (>=90%) e `alert` (>=100%, sessao estourou o limite) sao decididos
+  separadamente em `main.js::buildSnapshot`, com prioridade sobre o
+  resultado de `computeState`.
 - `main.js` — processo principal: janela, tray, polling (`config.json ->
-  pollIntervalMs`), notificações de threshold, export de CSV.
+  pollIntervalMs`), calculo dos 4 ratios (session/daily/weekly/monthly),
+  `activityState` final (`working|light|idle|hot|alert`), `toolCategory`
+  (so preenchido quando `activityState === 'working'`), notificações de
+  threshold, export de CSV.
 - `preload.js` — unica ponte entre renderer e main (`contextBridge`). Se
   adicionar uma nova acao que o renderer precisa pedir ao main, exponha
   aqui, nao habilite `nodeIntegration`.
-- `renderer/` — UI. `style.css` tem os estados do capy (`.idle`,
-  `.working`, `.sleeping`, `.alert`) controlados via `className` em
-  `renderer.js::setCapyState`.
-- `config.json` — unico lugar de configuração do usuário (limites,
-  thresholds, preços). Nao hardcode numero de limite/preço em outro lugar.
-- `scripts/generate-icon.js` — gera `assets/icon.png` sem dependencia
-  externa (PNG feito na mao com zlib). Rode de novo se mudar o desenho do
-  icone do tray.
+- `renderer/` — UI. `style.css` tem os estados do personagem (`.working`,
+  `.light`, `.idle`, `.hot`, `.alert` — mesmos nomes de `activityState`),
+  os `.prop` que aparecem/somem por estado (`.tool` com 3 icones
+  selecionados via `[data-tool]`, `.mug`, `.bed`), e duas classes
+  efemeras controladas só no renderer: `.poked` (clique no personagem) e
+  `.celebrating` (janela de 5h renovou depois de quase estourar).
+  `renderer.js::render()` troca `className` do `#spark` pro valor de
+  `activityState`, seta `dataset.tool`, e reaplica a classe efemera ativa
+  (se houver) por cima — nao ha logica de decisao de estado no renderer,
+  só orquestração das transições momentâneas (poke/celebrate).
+- `config.json` — unico lugar de configuração do usuário (limites diario/
+  semanal/mensal/sessao, `activityThresholdsMs`, thresholds de notificação,
+  preços). Nao hardcode numero de limite/preço em outro lugar.
+- `scripts/generate-icon.js` — gera `assets/icon.png` (faisca de 4 pontas,
+  gradiente creme->laranja) sem dependencia externa (PNG feito na mao com
+  zlib). Rode de novo se mudar o desenho do icone do tray.
+
+## Por que a forma é uma "faisca" e nao o logo do Claude
+
+Decisao explicita do usuario: usar o simbolo oficial da Anthropic num app
+de terceiros redistribuido é risco de marca, e nao ha asset oficial
+licenciado disponivel aqui. A faisca de 4 pontas (`clip-path` em
+`.spark-shape`) usa a paleta de cor do Claude mas é uma forma geometrica
+original. Nao trocar de volta pro logo oficial sem essa decisao ser
+revisitada explicitamente com o usuario.
 
 ## Formato dos dados de origem (JSONL do Claude Code)
 
@@ -54,6 +86,11 @@ Só interessam linhas com `"type":"assistant"`, que tem:
 `tokensForEntry()` em `usage.js` soma os quatro campos de token. Se a
 Anthropic mudar esse schema (novo campo relevante, nome diferente), é so
 esse ponto que precisa mudar.
+
+`message.content` (array) tambem pode conter itens `{type: "tool_use",
+name: "Read"}` etc. — é o que `getLastToolUse()` em `usage.js` varre pra
+saber qual ferramenta acabou de rodar. Vem de graça no mesmo JSONL local,
+nenhuma leitura extra.
 
 ## Adicionando uma feature nova
 

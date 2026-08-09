@@ -1,5 +1,12 @@
 {
   "softSessionLimitTokens": 3000000,
+  "dailyLimitTokens": 8000000,
+  "weeklyLimitTokens": 40000000,
+  "monthlyLimitTokens": 150000000,
+  "activityThresholdsMs": {
+    "working": 90000,
+    "light": 900000
+  },
   "pollIntervalMs": 15000,
   "notifyThresholds": [0.75, 0.9, 1.0],
   "startInTray": false,

@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 
 const usage = require('./usage');
+const activity = require('./activity');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 const HISTORY_CSV_PATH = path.join(os.homedir(), '.capy-usage-monitor', 'history.csv');
@@ -14,7 +15,17 @@ function loadConfig() {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   } catch {
-    return { softSessionLimitTokens: 3000000, pollIntervalMs: 15000, notifyThresholds: [0.75, 0.9, 1.0], startInTray: false, pricingPerMillionTokens: {} };
+    return {
+      softSessionLimitTokens: 3000000,
+      dailyLimitTokens: 8000000,
+      weeklyLimitTokens: 40000000,
+      monthlyLimitTokens: 150000000,
+      activityThresholdsMs: { working: 90000, light: 900000 },
+      pollIntervalMs: 15000,
+      notifyThresholds: [0.75, 0.9, 1.0],
+      startInTray: false,
+      pricingPerMillionTokens: {},
+    };
   }
 }
 
@@ -38,9 +49,38 @@ function estimateCostUsd(weeklyByModel) {
 
 function buildSnapshot() {
   const snap = usage.getSnapshot();
-  snap.softSessionLimitTokens = config.softSessionLimitTokens;
-  snap.sessionRatio = snap.currentSession.totalTokens / config.softSessionLimitTokens;
+  snap.limits = {
+    session: config.softSessionLimitTokens,
+    daily: config.dailyLimitTokens,
+    weekly: config.weeklyLimitTokens,
+    monthly: config.monthlyLimitTokens,
+  };
+  snap.ratios = {
+    session: snap.currentSession.totalTokens / config.softSessionLimitTokens,
+    daily: snap.todayTokens / config.dailyLimitTokens,
+    weekly: snap.weeklyTokens / config.weeklyLimitTokens,
+    monthly: snap.monthlyTokens / config.monthlyLimitTokens,
+  };
+  // Compatibilidade com o campo antigo usado pelas notificacoes.
+  snap.sessionRatio = snap.ratios.session;
   snap.estimatedWeeklyCostUsd = estimateCostUsd(snap.weeklyByModel);
+
+  if (snap.ratios.session >= 1) {
+    snap.activityState = 'alert';
+  } else if (snap.ratios.session >= 0.9) {
+    snap.activityState = 'hot';
+  } else {
+    snap.activityState = activity.computeState({
+      lastActivityMs: snap.lastActivityMs,
+      workingMs: config.activityThresholdsMs.working,
+      lightMs: config.activityThresholdsMs.light,
+    });
+  }
+
+  snap.toolCategory = snap.activityState === 'working'
+    ? activity.categorizeTool(usage.getLastToolUse(config.activityThresholdsMs.working))
+    : null;
+
   return snap;
 }
 
@@ -74,8 +114,8 @@ function pushSnapshot() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 300,
-    height: 420,
+    width: 320,
+    height: 660,
     resizable: false,
     frame: false,
     alwaysOnTop: true,

@@ -1,14 +1,41 @@
 'use strict';
 
-const capyEl = document.getElementById('capy');
-const capyStatusEl = document.getElementById('capyStatus');
-const sessionTokensEl = document.getElementById('sessionTokens');
-const sessionBarEl = document.getElementById('sessionBar');
+const sparkEl = document.getElementById('spark');
+const sparkStatusEl = document.getElementById('sparkStatus');
 const modelBreakdownEl = document.getElementById('modelBreakdown');
 const estCostEl = document.getElementById('estCost');
 const heatmapEl = document.getElementById('heatmap');
 const exportBtn = document.getElementById('exportBtn');
 const closeBtn = document.getElementById('closeBtn');
+
+const bars = {
+  session: { text: document.getElementById('sessionTokens'), fill: document.getElementById('sessionBar') },
+  daily: { text: document.getElementById('dailyTokens'), fill: document.getElementById('dailyBar') },
+  weekly: { text: document.getElementById('weeklyTokens'), fill: document.getElementById('weeklyBar') },
+  monthly: { text: document.getElementById('monthlyTokens'), fill: document.getElementById('monthlyBar') },
+};
+
+const STATUS_LABEL = {
+  working: 'trabalhando',
+  light: 'uma pausa pro cafe',
+  idle: 'dormindo',
+  hot: 'quase la...',
+  alert: 'no limite!',
+};
+
+let previousSessionRatio = null;
+let transientTimeout = null;
+let currentTransient = null;
+
+function addTransient(cls, durationMs) {
+  currentTransient = cls;
+  sparkEl.classList.add(cls);
+  clearTimeout(transientTimeout);
+  transientTimeout = setTimeout(() => {
+    sparkEl.classList.remove(cls);
+    currentTransient = null;
+  }, durationMs);
+}
 
 function formatTokens(n) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
@@ -16,21 +43,13 @@ function formatTokens(n) {
   return String(n);
 }
 
-function setCapyState(ratio, entryCount) {
-  capyEl.className = 'capy';
-  if (ratio >= 1) {
-    capyEl.classList.add('alert');
-    capyStatusEl.textContent = 'no limite!';
-  } else if (ratio >= 0.75) {
-    capyEl.classList.add('working');
-    capyStatusEl.textContent = 'trabalhando duro';
-  } else if (entryCount === 0) {
-    capyEl.classList.add('sleeping');
-    capyStatusEl.textContent = 'dormindo';
-  } else {
-    capyEl.classList.add('idle');
-    capyStatusEl.textContent = 'tranquilo';
-  }
+function renderBar(bar, used, limit, ratio) {
+  bar.text.textContent = `${formatTokens(used)} / ${formatTokens(limit)}`;
+  const pct = Math.min(100, Math.round(ratio * 100));
+  bar.fill.style.width = `${pct}%`;
+  bar.fill.className = 'bar-fill';
+  if (ratio >= 1) bar.fill.classList.add('danger');
+  else if (ratio >= 0.75) bar.fill.classList.add('warn');
 }
 
 function renderModelBreakdown(byModel) {
@@ -78,24 +97,35 @@ function renderHeatmap(dailyLast30) {
 }
 
 function render(snapshot) {
-  const { currentSession, weeklyByModel, dailyLast30, sessionRatio, estimatedWeeklyCostUsd } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, estimatedWeeklyCostUsd, activityState, toolCategory } = snapshot;
 
-  sessionTokensEl.textContent = `${formatTokens(currentSession.totalTokens)} / ${formatTokens(snapshot.softSessionLimitTokens)}`;
-  const pct = Math.min(100, Math.round(sessionRatio * 100));
-  sessionBarEl.style.width = `${pct}%`;
-  sessionBarEl.className = 'bar-fill';
-  if (sessionRatio >= 1) sessionBarEl.classList.add('danger');
-  else if (sessionRatio >= 0.75) sessionBarEl.classList.add('warn');
+  renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session);
+  renderBar(bars.daily, snapshot.todayTokens, limits.daily, ratios.daily);
+  renderBar(bars.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly);
+  renderBar(bars.monthly, snapshot.monthlyTokens, limits.monthly, ratios.monthly);
 
   renderModelBreakdown(weeklyByModel);
   renderHeatmap(dailyLast30);
   estCostEl.textContent = `~$${estimatedWeeklyCostUsd.toFixed(2)}`;
 
-  setCapyState(sessionRatio, currentSession.entryCount);
+  // Janela de 5h estourada (>=90%) que caiu bem baixo de novo = renovou. Comemora.
+  if (previousSessionRatio != null && previousSessionRatio >= 0.9 && ratios.session < 0.3) {
+    addTransient('celebrating', 1200);
+  }
+  previousSessionRatio = ratios.session;
+
+  sparkEl.className = `spark ${activityState}`;
+  if (toolCategory) sparkEl.dataset.tool = toolCategory;
+  else delete sparkEl.dataset.tool;
+  if (currentTransient) sparkEl.classList.add(currentTransient);
+
+  sparkStatusEl.textContent = STATUS_LABEL[activityState] || activityState;
 }
 
 window.capyApi.onUpdate(render);
 window.capyApi.requestSnapshot().then(render);
+
+sparkEl.addEventListener('click', () => addTransient('poked', 400));
 
 exportBtn.addEventListener('click', () => {
   window.capyApi.exportCsv();

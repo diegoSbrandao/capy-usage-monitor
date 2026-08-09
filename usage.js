@@ -59,6 +59,7 @@ function readEntries(sinceMs) {
         timestamp: ts,
         model: obj.message.model || 'unknown',
         tokens: tokensForEntry(obj.message.usage),
+        content: obj.message.content,
       });
     }
   }
@@ -90,12 +91,48 @@ function getThirtyDayHeatmap() {
   return byDay;
 }
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function getLastActivityMs() {
+  const entries = readEntries(ONE_DAY_MS);
+  if (entries.length === 0) return null;
+  return Math.max(...entries.map((e) => e.timestamp));
+}
+
+function sumTokens(map) {
+  return Object.values(map).reduce((sum, v) => sum + v, 0);
+}
+
+// Nome da ultima tool_use dentro da janela informada (default: 90s, mesma
+// escala do estado "working"). Usado so pra escolher o icone de acao —
+// nao afeta calculo de tokens.
+function getLastToolUse(windowMs) {
+  const ms = windowMs == null ? 90 * 1000 : windowMs;
+  const entries = readEntries(ms);
+  entries.sort((a, b) => b.timestamp - a.timestamp);
+  for (const entry of entries) {
+    if (!Array.isArray(entry.content)) continue;
+    for (let i = entry.content.length - 1; i >= 0; i--) {
+      const item = entry.content[i];
+      if (item && item.type === 'tool_use' && item.name) return item.name;
+    }
+  }
+  return null;
+}
+
 function getSnapshot() {
+  const dailyLast30 = getThirtyDayHeatmap();
+  const weeklyByModel = getWeeklyModelBreakdown();
+  const todayKey = new Date().toISOString().slice(0, 10);
   return {
     generatedAt: new Date().toISOString(),
     currentSession: getCurrentSessionUsage(),
-    weeklyByModel: getWeeklyModelBreakdown(),
-    dailyLast30: getThirtyDayHeatmap(),
+    weeklyByModel,
+    dailyLast30,
+    todayTokens: dailyLast30[todayKey] || 0,
+    weeklyTokens: sumTokens(weeklyByModel),
+    monthlyTokens: sumTokens(dailyLast30),
+    lastActivityMs: getLastActivityMs(),
   };
 }
 
@@ -104,6 +141,8 @@ module.exports = {
   getCurrentSessionUsage,
   getWeeklyModelBreakdown,
   getThirtyDayHeatmap,
+  getLastActivityMs,
+  getLastToolUse,
 };
 
 if (require.main === module) {

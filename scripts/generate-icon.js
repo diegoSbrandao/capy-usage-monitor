@@ -60,29 +60,34 @@ function makePng(size, [r, g, b], drawFn) {
   return Buffer.concat([sig, ihdr, idat, iend]);
 }
 
-// Capivara minimalista: circulo marrom com "focinho" mais claro e dois pontos de olho.
-function drawCapy(x, y) {
+// Faisca/estrela de 4 pontas, gradiente laranja (base) -> creme (topo),
+// inspirada na paleta de marca do Claude, sem reproduzir o logo oficial.
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function drawSpark(x, y) {
   const size = 32;
   const cx = size / 2;
-  const cy = size / 2 + 2;
+  const cy = size / 2;
   const dx = x - cx;
   const dy = y - cy;
+
+  // Estrela de 4 pontas via superformula simplificada (|dx|^n + |dy|^n <= r^n
+  // com pontas alongadas nos eixos).
+  const angle = Math.atan2(dy, dx);
   const dist = Math.sqrt(dx * dx + dy * dy);
+  const pointiness = Math.pow(Math.abs(Math.cos(2 * angle)), 3);
+  const radius = 1.5 + pointiness * 14;
 
-  // olhos
-  if (Math.abs(x - 11) <= 1 && Math.abs(y - 13) <= 1) return [30, 20, 10, 255];
-  if (Math.abs(x - 21) <= 1 && Math.abs(y - 13) <= 1) return [30, 20, 10, 255];
+  if (dist > radius) return [0, 0, 0, 0]; // transparente
 
-  // focinho
-  const mdx = x - cx;
-  const mdy = y - (cy + 6);
-  if (Math.sqrt(mdx * mdx + mdy * mdy) < 6) return [196, 154, 108, 255];
-
-  if (dist < 15) return [139, 98, 58, 255]; // corpo marrom
-  return [0, 0, 0, 0]; // transparente
+  const t = Math.min(1, Math.max(0, (y / size)));
+  const r = Math.round(lerp(240, 217, t)); // creme -> laranja
+  const g = Math.round(lerp(223, 119, t));
+  const b = Math.round(lerp(200, 87, t));
+  return [r, g, b, 255];
 }
 
-const out = makePng(32, [139, 98, 58], drawCapy);
+const out = makePng(32, [217, 119, 87], drawSpark);
 const dir = path.join(__dirname, '..', 'assets');
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(path.join(dir, 'icon.png'), out);

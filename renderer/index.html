@@ -11,27 +11,73 @@
     <button id="closeBtn" title="Ocultar">&#x2715;</button>
   </div>
 
-  <div class="capy-stage">
-    <div id="capy" class="capy idle">
-      <div class="capy-ear left"></div>
-      <div class="capy-ear right"></div>
-      <div class="capy-body">
-        <div class="capy-snout"></div>
-        <div class="capy-eye left"></div>
-        <div class="capy-eye right"></div>
+  <div class="scene">
+    <div class="window">
+      <div class="window-glow"></div>
+    </div>
+    <div class="desk"></div>
+
+    <div id="spark" class="spark idle">
+      <div class="spark-shape"></div>
+      <div class="spark-eye left"></div>
+      <div class="spark-eye right"></div>
+
+      <div class="prop tool">
+        <div class="icon-read"><div class="lens"></div><div class="lens-handle"></div></div>
+        <div class="icon-edit"><div class="pencil-body"></div><div class="pencil-tip"></div></div>
+        <div class="icon-run"><div class="gear"></div></div>
+      </div>
+
+      <div class="prop mug">
+        <div class="mug-cup"></div>
+        <div class="mug-handle"></div>
+        <div class="steam s1"></div>
+        <div class="steam s2"></div>
+      </div>
+
+      <div class="prop bed">
+        <div class="bed-frame"></div>
+        <div class="bed-pillow"></div>
+        <div class="zzz">Z z z</div>
+      </div>
+
+      <div class="spark-burst">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
-    <div id="capyStatus" class="capy-status">tranquilo</div>
+    <div id="sparkStatus" class="spark-status">tranquilo</div>
   </div>
 
   <div class="section">
     <div class="label-row">
-      <span>Sessao atual (5h)</span>
+      <span>Sessao (5h)</span>
       <span id="sessionTokens">-</span>
     </div>
-    <div class="bar-track">
-      <div id="sessionBar" class="bar-fill"></div>
+    <div class="bar-track"><div id="sessionBar" class="bar-fill"></div></div>
+  </div>
+
+  <div class="section">
+    <div class="label-row">
+      <span>Hoje</span>
+      <span id="dailyTokens">-</span>
     </div>
+    <div class="bar-track"><div id="dailyBar" class="bar-fill"></div></div>
+  </div>
+
+  <div class="section">
+    <div class="label-row">
+      <span>Semana</span>
+      <span id="weeklyTokens">-</span>
+    </div>
+    <div class="bar-track"><div id="weeklyBar" class="bar-fill"></div></div>
+  </div>
+
+  <div class="section">
+    <div class="label-row">
+      <span>Mes</span>
+      <span id="monthlyTokens">-</span>
+    </div>
+    <div class="bar-track"><div id="monthlyBar" class="bar-fill"></div></div>
   </div>
 
   <div class="section">
