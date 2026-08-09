@@ -85,6 +85,16 @@ function formatDuration(ms) {
   return h > 0 ? `${h}h${m}min` : `${m}min`;
 }
 
+// Pra janelas longas (semana), dias fazem mais sentido que "137h".
+function formatDurationDays(ms) {
+  if (ms == null || ms <= 0) return null;
+  const totalHours = Math.round(ms / 3600000);
+  const d = Math.floor(totalHours / 24);
+  const h = totalHours % 24;
+  if (d === 0) return `${h}h`;
+  return h > 0 ? `${d}d${h}h` : `${d}d`;
+}
+
 // Progressao de 0 a 100% em 6 faixas (verde claro -> vermelho maximo).
 function tierFor(ratio) {
   const pct = Math.min(1, ratio) * 100;
@@ -96,10 +106,12 @@ function tierFor(ratio) {
   return 'l6';
 }
 
-function renderBar(bar, used, limit, ratio, realInfo) {
+function renderBar(bar, used, limit, ratio, realInfo, useDaysForReset) {
   if (realInfo) {
     const pct = Math.round(realInfo.pct);
-    const resetTxt = formatDuration(realInfo.resetMs);
+    const resetTxt = useDaysForReset
+      ? formatDurationDays(realInfo.resetMs)
+      : formatDuration(realInfo.resetMs);
     bar.text.textContent = resetTxt ? `${pct}% (reinicia em ${resetTxt})` : `${pct}%`;
   } else {
     bar.text.textContent = `${formatTokens(used)} / ${formatTokens(limit)}`;
@@ -227,7 +239,7 @@ function render(snapshot) {
 
   renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderBar(bars.daily, snapshot.todayTokens, limits.daily, ratios.daily);
-  renderBar(bars.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly, real.week);
+  renderBar(bars.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly, real.week, true);
   renderBar(bars.monthly, snapshot.monthlyTokens, limits.monthly, ratios.monthly);
   setTag(sessionTagEl, !!real.session);
   setTag(weeklyTagEl, !!real.week);
