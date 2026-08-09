@@ -2,25 +2,46 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<title>Capy Usage Monitor</title>
+<title>Spark Monitor</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="titlebar">
-    <span>Capy Usage Monitor</span>
+    <span>Spark Monitor</span>
     <button id="closeBtn" title="Ocultar">&#x2715;</button>
   </div>
 
-  <div class="scene">
-    <div class="window">
-      <div class="window-glow"></div>
+  <div class="account">
+    <div id="accountDisconnected" class="account-row">
+      <span class="account-hint">numeros estimados localmente</span>
+      <button id="connectBtn" class="account-btn">Conectar conta</button>
     </div>
-    <div class="desk"></div>
+    <div id="accountPasteRow" class="account-row hidden">
+      <input id="codeInput" class="code-input" type="text" placeholder="cole o codigo#state aqui" />
+      <button id="submitCodeBtn" class="account-btn">Confirmar</button>
+    </div>
+    <div id="accountConnected" class="account-row hidden">
+      <span id="accountLabel" class="account-hint">conectado</span>
+      <button id="logoutBtn" class="account-btn subtle">Desconectar</button>
+    </div>
+    <div id="accountError" class="account-error hidden"></div>
+  </div>
+
+  <div class="scene">
+    <div class="planet">
+      <div class="planet-ring"></div>
+    </div>
 
     <div id="spark" class="spark idle">
+      <div class="spark-arm left"></div>
+      <div class="spark-arm right"></div>
       <div class="spark-shape"></div>
-      <div class="spark-eye left"></div>
-      <div class="spark-eye right"></div>
+      <div class="spark-glasses">
+        <div class="lens"></div>
+        <div class="lens"></div>
+      </div>
+      <div class="spark-leg left"></div>
+      <div class="spark-leg right"></div>
 
       <div class="prop tool">
         <div class="icon-read"><div class="lens"></div><div class="lens-handle"></div></div>
@@ -50,7 +71,7 @@
 
   <div class="section">
     <div class="label-row">
-      <span>Sessao (5h)</span>
+      <span>Sessao (5h) <span id="sessionTag" class="tag"></span></span>
       <span id="sessionTokens">-</span>
     </div>
     <div class="bar-track"><div id="sessionBar" class="bar-fill"></div></div>
@@ -58,7 +79,7 @@
 
   <div class="section">
     <div class="label-row">
-      <span>Hoje</span>
+      <span>Hoje <span class="tag">estimado</span></span>
       <span id="dailyTokens">-</span>
     </div>
     <div class="bar-track"><div id="dailyBar" class="bar-fill"></div></div>
@@ -66,7 +87,7 @@
 
   <div class="section">
     <div class="label-row">
-      <span>Semana</span>
+      <span>Semana <span id="weeklyTag" class="tag"></span></span>
       <span id="weeklyTokens">-</span>
     </div>
     <div class="bar-track"><div id="weeklyBar" class="bar-fill"></div></div>
@@ -74,7 +95,7 @@
 
   <div class="section">
     <div class="label-row">
-      <span>Mes</span>
+      <span>Mes <span class="tag">estimado</span></span>
       <span id="monthlyTokens">-</span>
     </div>
     <div class="bar-track"><div id="monthlyBar" class="bar-fill"></div></div>
@@ -97,7 +118,7 @@
     <div id="heatmap" class="heatmap"></div>
   </div>
 
-  <button id="exportBtn" class="export-btn">Exportar CSV</button>
+  <button id="exportBtn" class="export-btn">Exportar Excel (por sessao)</button>
 
   <script src="renderer.js"></script>
 </body>

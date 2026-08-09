@@ -3,13 +3,15 @@ name: monitor-dev
 description: Use ao trabalhar no projeto capy-usage-monitor (adicionar features, mexer no calculo de uso, mudar o mascote, ajustar config). Explica arquitetura, onde cada coisa fica e como testar sem quebrar o parser de tokens.
 ---
 
-# Capy Usage Monitor — guia de manutenção
+# Spark Monitor — guia de manutenção
 
 Widget Electron que le os transcripts locais do Claude Code
 (`~/.claude/projects/**/*.jsonl`) e mostra consumo de tokens com um
-personagem faisca (paleta de cores do Claude, forma original — nao é o
-logo oficial). Sem rede, sem OAuth — de proposito (veja README.md, secao
-"Por que é diferente").
+mascote blocado laranja com oculos pixelados (estilo meme da comunidade
+Claude Code, desenho 100% original — nao traca nenhuma foto/logo), num
+cenario de nebulosa tambem em CSS puro. Login OAuth2 é **opcional**: sem
+ele, tudo funciona só com dados locais; com ele, Sessao/Semana passam a
+mostrar o percentual real da conta (veja README.md).
 
 ## Onde fica cada coisa
 
@@ -28,39 +30,52 @@ logo oficial). Sem rede, sem OAuth — de proposito (veja README.md, secao
   `hot` (>=90%) e `alert` (>=100%, sessao estourou o limite) sao decididos
   separadamente em `main.js::buildSnapshot`, com prioridade sobre o
   resultado de `computeState`.
-- `main.js` — processo principal: janela, tray, polling (`config.json ->
-  pollIntervalMs`), calculo dos 4 ratios (session/daily/weekly/monthly),
-  `activityState` final (`working|light|idle|hot|alert`), `toolCategory`
-  (so preenchido quando `activityState === 'working'`), notificações de
-  threshold, export de CSV.
+- `auth.js` — OAuth2 PKCE contra o mesmo client publico que o Claude Code
+  usa (`CLIENT_ID` fixo). `begin()` monta a URL de autorizacao,
+  `complete(code)` troca por tokens, `fetchUsage()` retorna o percentual
+  oficial (`session`/`week`, cada um `{pct, resetMs}`), `fetchProfile()`
+  retorna email/plano. Token persistido em `~/.capy-usage-monitor/auth.json`
+  (fora do repo, nunca commitar). Zero dependencia do Electron.
+- `main.js` — processo principal: janela, tray, polling local
+  (`config.json -> pollIntervalMs`), poll separado do OAuth (5min, com
+  backoff ate 30min em 429), calculo dos 4 ratios (session/daily/weekly/
+  monthly) — session/weekly viram o percentual REAL quando
+  `auth.isConnected()` e ha `realUsage` em cache — `activityState` final
+  (`working|light|idle|hot|alert`), `toolCategory`, notificações de
+  threshold, export de Excel por sessao (`exportHistorySessions`, usa
+  `exceljs`), handlers IPC `auth-start`/`auth-code`/`auth-logout`.
 - `preload.js` — unica ponte entre renderer e main (`contextBridge`). Se
   adicionar uma nova acao que o renderer precisa pedir ao main, exponha
   aqui, nao habilite `nodeIntegration`.
 - `renderer/` — UI. `style.css` tem os estados do personagem (`.working`,
   `.light`, `.idle`, `.hot`, `.alert` — mesmos nomes de `activityState`),
   os `.prop` que aparecem/somem por estado (`.tool` com 3 icones
-  selecionados via `[data-tool]`, `.mug`, `.bed`), e duas classes
-  efemeras controladas só no renderer: `.poked` (clique no personagem) e
-  `.celebrating` (janela de 5h renovou depois de quase estourar).
-  `renderer.js::render()` troca `className` do `#spark` pro valor de
-  `activityState`, seta `dataset.tool`, e reaplica a classe efemera ativa
-  (se houver) por cima — nao ha logica de decisao de estado no renderer,
-  só orquestração das transições momentâneas (poke/celebrate).
+  selecionados via `[data-tool]`, `.mug`, `.bed`), duas classes efemeras
+  controladas só no renderer (`.poked`, `.celebrating`), e a secao
+  `.account` (conectar/colar codigo/desconectar). `renderer.js::render()`
+  troca `className` do `#spark`, seta `dataset.tool`, atualiza as tags
+  "real"/"estimado" das barras de Sessao/Semana conforme `snapshot.real`,
+  e chama `updateAccountUI(snapshot.real.connected)` — nao ha logica de
+  decisao de estado no renderer, só orquestração.
 - `config.json` — unico lugar de configuração do usuário (limites diario/
-  semanal/mensal/sessao, `activityThresholdsMs`, thresholds de notificação,
-  preços). Nao hardcode numero de limite/preço em outro lugar.
-- `scripts/generate-icon.js` — gera `assets/icon.png` (faisca de 4 pontas,
-  gradiente creme->laranja) sem dependencia externa (PNG feito na mao com
+  semanal/mensal/sessao — usados so quando NAO conectado —
+  `activityThresholdsMs`, thresholds de notificação, preços). Nao
+  hardcode numero de limite/preço em outro lugar.
+- `scripts/generate-icon.js` — gera `assets/icon.png` (mesmo desenho do
+  mascote, versao pixel) sem dependencia externa (PNG feito na mao com
   zlib). Rode de novo se mudar o desenho do icone do tray.
 
-## Por que a forma é uma "faisca" e nao o logo do Claude
+## Por que o mascote é um boneco original e nao uma foto/logo
 
-Decisao explicita do usuario: usar o simbolo oficial da Anthropic num app
-de terceiros redistribuido é risco de marca, e nao ha asset oficial
-licenciado disponivel aqui. A faisca de 4 pontas (`clip-path` em
-`.spark-shape`) usa a paleta de cor do Claude mas é uma forma geometrica
-original. Nao trocar de volta pro logo oficial sem essa decisao ser
-revisitada explicitamente com o usuario.
+Duas decisoes explicitas do usuario, mesma logica nos dois casos: nao
+redistribuir imagem de terceiros (foto de fã-arte, foto de banco de
+imagem, logo oficial da Anthropic) — só recriar o *estilo* em CSS/forma
+geometrica original. O boneco laranja com oculos pixelados é inspirado no
+meme "You're Absolutely Right" da comunidade Claude Code, mas desenhado do
+zero (`.spark-shape`, `.spark-glasses`, `.spark-arm`, `.spark-leg`). O
+cenario de nebulosa (`.scene`, `.planet`) é inspirado em arte espacial
+generica, tambem 100% gradientes CSS. Nao trocar por asset/imagem real
+sem essa decisao ser revisitada explicitamente com o usuario.
 
 ## Formato dos dados de origem (JSONL do Claude Code)
 
@@ -118,8 +133,12 @@ confira se `~/.claude/projects/` existe e tem `.jsonl` recentes.
 
 ## Do NOT
 
-- Nao reintroduzir OAuth/login contra endpoint privado da Anthropic sem
-  decisão explícita — é o diferencial de robustez deste projeto frente ao
-  claude-usage-monitor e ao Claude-Glass.
-- Nao commitar `~/.claude/.credentials.json` nem qualquer conteúdo de
-  transcript (só os números agregados importam).
+- Nao remover o fallback local (funcionar sem login) — o OAuth é opcional
+  de proposito, porque depende de um endpoint nao documentado pra
+  terceiros que pode quebrar a qualquer momento.
+- Nao commitar `~/.claude/.credentials.json`, `~/.capy-usage-monitor/auth.json`
+  nem qualquer conteúdo de transcript (só os números agregados importam).
+  Nenhum dos dois fica dentro da pasta do repo, mas nunca copie o conteúdo
+  pra um arquivo do projeto.
+- Nao trocar o mascote/cenario por uma imagem real (foto, logo oficial)
+  sem decisão explícita do usuário — ver seção acima.

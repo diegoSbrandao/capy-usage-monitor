@@ -60,34 +60,23 @@ function makePng(size, [r, g, b], drawFn) {
   return Buffer.concat([sig, ihdr, idat, iend]);
 }
 
-// Faisca/estrela de 4 pontas, gradiente laranja (base) -> creme (topo),
-// inspirada na paleta de marca do Claude, sem reproduzir o logo oficial.
-function lerp(a, b, t) { return a + (b - a) * t; }
-
-function drawSpark(x, y) {
-  const size = 32;
-  const cx = size / 2;
-  const cy = size / 2;
-  const dx = x - cx;
-  const dy = y - cy;
-
-  // Estrela de 4 pontas via superformula simplificada (|dx|^n + |dy|^n <= r^n
-  // com pontas alongadas nos eixos).
-  const angle = Math.atan2(dy, dx);
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const pointiness = Math.pow(Math.abs(Math.cos(2 * angle)), 3);
-  const radius = 1.5 + pointiness * 14;
-
-  if (dist > radius) return [0, 0, 0, 0]; // transparente
-
-  const t = Math.min(1, Math.max(0, (y / size)));
-  const r = Math.round(lerp(240, 217, t)); // creme -> laranja
-  const g = Math.round(lerp(223, 119, t));
-  const b = Math.round(lerp(200, 87, t));
-  return [r, g, b, 255];
+// Boneco blocado laranja com oculos pixelados (estilo meme da comunidade
+// Claude Code) — desenho geometrico original, nao traca nenhuma foto/logo.
+function drawMascot(x, y) {
+  const margin = 3;
+  if (x < margin || x >= 32 - margin || y < margin || y >= 32 - margin) {
+    return [0, 0, 0, 0]; // transparente
+  }
+  // faixa dos oculos: preto com quadriculado branco (padrao "thug life")
+  if (y >= 12 && y < 18 && x >= margin + 2 && x < 32 - margin - 2) {
+    const cellX = Math.floor((x - margin) / 3);
+    const cellY = Math.floor((y - 12) / 3);
+    return (cellX + cellY) % 2 === 0 ? [241, 233, 221, 255] : [23, 20, 15, 255];
+  }
+  return [217, 112, 30, 255]; // corpo laranja
 }
 
-const out = makePng(32, [217, 119, 87], drawSpark);
+const out = makePng(32, [217, 112, 30], drawMascot);
 const dir = path.join(__dirname, '..', 'assets');
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(path.join(dir, 'icon.png'), out);

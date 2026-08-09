@@ -1,7 +1,7 @@
 {
   "name": "capy-usage-monitor",
   "version": "0.1.0",
-  "description": "Desktop widget that tracks Claude Code token usage locally, with an original capybara pet mascot.",
+  "description": "Spark Monitor: desktop widget that tracks Claude Code token usage, with an original spark mascot and optional OAuth login for real usage percentages.",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
@@ -9,5 +9,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
   }
 }

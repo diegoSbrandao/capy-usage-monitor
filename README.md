@@ -1,30 +1,37 @@
-# Capy Usage Monitor
+# Spark Monitor
 
-Widget de desktop (Windows) que mostra o consumo de tokens do **Claude Code**
-em tempo real, com uma capivara pixel/CSS original como mascote.
+Widget de desktop (Windows) que mostra o consumo de tokens do **Claude
+Code** em tempo real, com um mascote blocado original (estilo meme da
+comunidade Claude Code) flutuando num cenário de nebulosa — tudo
+desenhado em CSS puro, nada de imagens de terceiros.
 
 Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-monitor)
-e [Claude-Glass](https://github.com/vitoriahellen/Claude-Glass), mas com uma
-diferença de arquitetura de propósito:
+(Clauddy) e [Claude-Glass](https://github.com/vitoriahellen/Claude-Glass).
 
-## Por que é diferente
+## O que tem
 
-- **Mascote e visual proprios**: capivara desenhada em CSS puro (nada copiado
-  dos outros dois projetos).
-- **Sem OAuth / sem endpoint privado**: os dois projetos de referência também
-  fazem login OAuth2 PKCE para replicar o percentual exato que aparece no
-  painel oficial Settings → Usage. Isso funciona, mas depende de um endpoint
-  interno não documentado da Anthropic, que pode mudar a qualquer momento.
-  Este projeto usa **só os logs locais que o próprio Claude Code já grava**
-  em `~/.claude/projects/**/*.jsonl` — mais simples e não quebra se a
-  Anthropic mudar algo do lado do servidor. O "limite" mostrado é um teto
-  configurável por você (`softSessionLimitTokens`), não o limite real do
-  plano.
-- **Extras que os outros não tem**:
-  - Exportação de histórico em CSV (30 dias).
-  - Estimativa de custo em USD por semana, com tabela de preço editável em
-    `config.json`.
-  - Limites e thresholds de notificação totalmente configuráveis.
+- **Sessão (5h) e Semana com percentual real** — login OAuth2 opcional
+  (mesmo fluxo do próprio Claude Code) que busca o percentual autoritativo
+  direto da conta Anthropic, igual ao painel oficial Settings → Usage.
+- **Hoje e Mês estimados localmente** — a API oficial não expõe essas
+  janelas, então continuam calculadas a partir dos logs locais do Claude
+  Code (`~/.claude/projects/**/*.jsonl`), contra um teto configurável.
+- **Mascote com ações**: pega uma ferramenta (lupa/lápis/engrenagem
+  conforme você está lendo, editando ou rodando comando), toma café numa
+  pausa curta, dorme quando ocioso, esquenta perto do limite e comemora
+  quando a janela de 5h renova.
+- **Poke**: clique no personagem por uma reação.
+- **Exportação em Excel por sessão** (`.xlsx` formatado, uma linha por
+  sessão do Claude Code — não por dia).
+- Estimativa de custo em USD, notificações de threshold configuráveis.
+
+## Por que o login é opcional (e não obrigatório)
+
+O percentual real via OAuth depende de um endpoint da Anthropic que não é
+uma API pública documentada pra terceiros — funciona porque usa o mesmo
+client OAuth que o próprio Claude Code usa, mas pode mudar sem aviso.
+Por isso o app funciona **sem** login (com estimativas locais, sempre
+disponíveis) e melhora **com** login (percentual exato de sessão/semana).
 
 ## Como rodar
 
@@ -33,6 +40,15 @@ npm install
 npm start
 ```
 
+## Conectando sua conta (opcional)
+
+1. Clique em **Conectar conta** no topo do widget — abre o navegador.
+2. Faça login normalmente e copie o código retornado.
+3. Cole no campo do widget e confirme.
+
+O token fica em `~/.capy-usage-monitor/auth.json`, só na sua máquina.
+Clique em **Desconectar** a qualquer momento pra apagá-lo.
+
 ## Configuração
 
 Edite `config.json`:
@@ -40,6 +56,10 @@ Edite `config.json`:
 ```json
 {
   "softSessionLimitTokens": 3000000,
+  "dailyLimitTokens": 8000000,
+  "weeklyLimitTokens": 40000000,
+  "monthlyLimitTokens": 150000000,
+  "activityThresholdsMs": { "working": 90000, "light": 900000 },
   "pollIntervalMs": 15000,
   "notifyThresholds": [0.75, 0.9, 1.0],
   "startInTray": false,
@@ -50,16 +70,11 @@ Edite `config.json`:
 ## Como funciona por baixo dos panos
 
 `usage.js` varre `~/.claude/projects/**/*.jsonl` (os transcripts que o
-Claude Code já salva localmente para cada sessão), filtra as entradas do
-tipo `assistant` e soma os campos `usage.input_tokens`,
-`usage.output_tokens`, `usage.cache_creation_input_tokens` e
-`usage.cache_read_input_tokens` de cada uma. A partir disso calcula:
-
-- tokens da janela atual de 5 horas;
-- consumo por modelo nos últimos 7 dias;
-- mapa diário dos últimos 30 dias.
-
-Nenhuma rede é usada — tudo é lido do disco local.
+Claude Code já salva localmente), soma os tokens de cada entrada
+`assistant` e também lê `message.content` em busca de `tool_use` (pra
+saber se você está lendo, editando ou rodando algo agora). `auth.js`
+implementa o login OAuth2 PKCE contra `api.anthropic.com/api/oauth/usage`
+só quando você conecta a conta — sem isso, zero rede é usada.
 
 ## Licença
 

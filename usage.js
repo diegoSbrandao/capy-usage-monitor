@@ -120,6 +120,75 @@ function getLastToolUse(windowMs) {
   return null;
 }
 
+// Resumo de UMA sessao (um arquivo .jsonl inteiro), usado pro export por
+// sessao. Diferente de readEntries(), le e agrega arquivo por arquivo pra
+// nao perder a fronteira entre sessoes.
+function parseSessionFile(file) {
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+  let startMs = null;
+  let endMs = null;
+  let totalTokens = 0;
+  let entryCount = 0;
+  const tokensByModel = {};
+
+  for (const line of raw.split('\n')) {
+    if (!line.trim()) continue;
+    let obj;
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (obj.type !== 'assistant' || !obj.message || !obj.message.usage) continue;
+    const ts = Date.parse(obj.timestamp);
+    if (Number.isNaN(ts)) continue;
+    if (startMs == null || ts < startMs) startMs = ts;
+    if (endMs == null || ts > endMs) endMs = ts;
+    const tokens = tokensForEntry(obj.message.usage);
+    totalTokens += tokens;
+    entryCount += 1;
+    const model = obj.message.model || 'unknown';
+    tokensByModel[model] = (tokensByModel[model] || 0) + tokens;
+  }
+
+  if (entryCount === 0) return null;
+
+  let topModel = null;
+  let topModelTokens = -1;
+  for (const [model, tokens] of Object.entries(tokensByModel)) {
+    if (tokens > topModelTokens) {
+      topModel = model;
+      topModelTokens = tokens;
+    }
+  }
+
+  return {
+    sessionId: path.basename(file, '.jsonl'),
+    project: path.basename(path.dirname(file)),
+    startMs,
+    endMs,
+    totalTokens,
+    entryCount,
+    topModel,
+  };
+}
+
+// Uma linha por sessao (arquivo .jsonl), mais recente primeiro.
+function getSessionHistory() {
+  const sessions = [];
+  for (const file of listTranscriptFiles()) {
+    const summary = parseSessionFile(file);
+    if (summary) sessions.push(summary);
+  }
+  sessions.sort((a, b) => b.startMs - a.startMs);
+  return sessions;
+}
+
 function getSnapshot() {
   const dailyLast30 = getThirtyDayHeatmap();
   const weeklyByModel = getWeeklyModelBreakdown();
@@ -143,6 +212,7 @@ module.exports = {
   getThirtyDayHeatmap,
   getLastActivityMs,
   getLastToolUse,
+  getSessionHistory,
 };
 
 if (require.main === module) {
