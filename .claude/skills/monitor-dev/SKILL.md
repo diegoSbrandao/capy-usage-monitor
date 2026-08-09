@@ -95,7 +95,8 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   redimensionada e reposicionada num canto pelo `main.js` (ver
   `minimizeBtn` -> `window.capyApi.setCompact`). `renderer.js::render()`
   troca `className` do `#spark`, seta `dataset.tool`, atualiza as tags
-  "real"/"estimado", chama `updateAccountUI(snapshot.real.connected)` —
+  "real"/"teto pessoal" (com `title` explicando a diferenca — ver secao
+  "honestidade dos dados" abaixo), chama `updateAccountUI(snapshot.real.connected)` —
   nao ha logica de decisao de estado no renderer, só orquestração.
   `.model-list` e `.heatmap` seguem o estilo do `overview.gif` de
   referência: `renderModelBreakdown()` desenha uma barra proporcional ao
@@ -119,10 +120,31 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   isso o rodape (numero da porcentagem) fica posicionado por cima do
   personagem em vez de abaixo, porque o absolute-positioning nao reserva
   espaço no fluxo normal que o `height:auto` possa medir.
-- `config.json` — unico lugar de configuração do usuário (limites diario/
-  semanal/mensal/sessao — usados so quando NAO conectado —
-  `activityThresholdsMs`, thresholds de notificação, preços). Nao
-  hardcode numero de limite/preço em outro lugar.
+- `config.json` — unico lugar de configuração do usuário (`*LimitTokens`
+  sao tetos PESSOAIS, nunca chame de "limite da Anthropic" em nenhum
+  texto de UI — a Anthropic so tem sessao de 5h e janela de 7 dias,
+  nada diario/mensal/semanal fixo — `activityThresholdsMs`, thresholds
+  de notificação). Nao ha mais tabela de preço aqui — foi removida (ver
+  secao "honestidade dos dados" abaixo).
+
+## Honestidade dos dados — NAO reintroduzir numero inventado
+
+Decisao explicita do usuario apos ele conferir contra a documentacao
+oficial (`support.claude.com/.../usage-limit-best-practices`): zero
+numero na tela pode parecer oficial sem ser. Por isso:
+- `pricingPerMillionTokens` e `estimateCostUsd()` (em `main.js`) foram
+  **removidos** — era uma tabela de preco digitada a mao por mim, sem
+  fonte oficial, e nao fazia sentido pra quem usa plano Pro/Max (nao
+  paga por token). Nao trazer essa ideia de volta.
+- No lugar, `usage.js::getSevenDayMedian()` calcula a mediana REAL de
+  tokens/dia dos ultimos 7 dias a partir do historico local, e retorna
+  `null` se o historico local tiver menos de 6 dias — o renderer mostra
+  "coletando dados (precisa de 7 dias)" nesse caso, nunca um numero
+  chutado antes da hora.
+- As tags das barras de Hoje/Mes dizem "teto pessoal" (nao "estimado"),
+  com `title` explicando que o numero de comparação vem de
+  `config.json`, editado pelo proprio usuario — nunca da Anthropic.
+  Mesma logica pra Sessao/Semana quando NAO conectado (fallback local).
 - `scripts/generate-icon.js` — gera `assets/icon.png` (mesmo desenho do
   mascote, versao pixel) sem dependencia externa (PNG feito na mao com
   zlib). Rode de novo se mudar o desenho do icone do tray.

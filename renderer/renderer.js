@@ -111,7 +111,10 @@ function renderBar(bar, used, limit, ratio, realInfo) {
 
 function setTag(el, isReal) {
   if (!el) return;
-  el.textContent = isReal ? 'real' : 'estimado';
+  el.textContent = isReal ? 'real' : 'teto pessoal';
+  el.title = isReal
+    ? 'Percentual oficial, vindo direto da API da Anthropic (mesmo dado do painel Settings -> Usage).'
+    : 'Sem conta conectada: comparado contra um teto local configuravel (config.json), nao um limite oficial da Anthropic.';
   el.classList.toggle('real', isReal);
 }
 
@@ -220,7 +223,7 @@ function renderCompactPct(ratio) {
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, estimatedWeeklyCostUsd, activityState, toolCategory, real, dailyAlert } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert } = snapshot;
 
   renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderBar(bars.daily, snapshot.todayTokens, limits.daily, ratios.daily);
@@ -232,7 +235,9 @@ function render(snapshot) {
 
   renderModelBreakdown(weeklyByModel);
   renderHeatmap(dailyLast30);
-  estCostEl.textContent = `~$${estimatedWeeklyCostUsd.toFixed(2)}`;
+  estCostEl.textContent = sevenDayMedianTokens == null
+    ? 'coletando dados (precisa de 7 dias)'
+    : `${formatTokens(sevenDayMedianTokens)} tokens/dia`;
 
   // Janela de 5h estourada (>=90%) que caiu bem baixo de novo = renovou. Comemora.
   if (previousSessionRatio != null && previousSessionRatio >= 0.9 && ratios.session < 0.3) {

@@ -33,7 +33,6 @@ function loadConfig() {
       pollIntervalMs: 15000,
       notifyThresholds: [0.75, 0.9, 1.0],
       startInTray: false,
-      pricingPerMillionTokens: {},
     };
   }
 }
@@ -108,18 +107,6 @@ async function pollUsage() {
   scheduleUsagePoll();
 }
 
-function estimateCostUsd(weeklyByModel) {
-  let total = 0;
-  for (const [model, tokens] of Object.entries(weeklyByModel)) {
-    const price = config.pricingPerMillionTokens[model];
-    if (!price) continue;
-    // Aproximacao: sem separar input/output no agregado, usa media dos dois precos.
-    const avgPerMillion = (price.input + price.output) / 2;
-    total += (tokens / 1_000_000) * avgPerMillion;
-  }
-  return total;
-}
-
 function buildSnapshot() {
   const snap = usage.getSnapshot();
   const dailyLimit = effectiveDailyLimit();
@@ -151,7 +138,9 @@ function buildSnapshot() {
 
   // Compatibilidade com o campo antigo usado pelas notificacoes.
   snap.sessionRatio = snap.ratios.session;
-  snap.estimatedWeeklyCostUsd = estimateCostUsd(snap.weeklyByModel);
+  // Mediana real de tokens/dia nos ultimos 7 dias (null ate ter 7 dias de
+  // historico local) — dado real, nao um preco inventado.
+  snap.sevenDayMedianTokens = usage.getSevenDayMedian();
 
   if (snap.ratios.session >= 1) {
     snap.activityState = 'alert';

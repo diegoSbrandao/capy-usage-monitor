@@ -10,11 +10,5 @@
   },
   "pollIntervalMs": 15000,
   "notifyThresholds": [0.75, 0.9, 1.0],
-  "startInTray": false,
-  "pricingPerMillionTokens": {
-    "claude-sonnet-5": { "input": 3, "output": 15 },
-    "claude-opus-5": { "input": 15, "output": 75 },
-    "claude-haiku-4-5-20251001": { "input": 0.8, "output": 4 },
-    "_note": "Aproximado, edite conforme a tabela oficial de precos mudar. Usado so pra estimativa de custo na tela."
-  }
+  "startInTray": false
 }

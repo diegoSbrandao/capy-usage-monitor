@@ -103,6 +103,30 @@ function sumTokens(map) {
   return Object.values(map).reduce((sum, v) => sum + v, 0);
 }
 
+// Mediana real de tokens/dia nos ultimos 7 dias corridos (hoje + 6
+// anteriores, dias sem uso contam como 0). Retorna null se o historico
+// local ainda nao cobre 7 dias — nao inventa numero antes disso.
+function getSevenDayMedian() {
+  const allEntries = readEntries(); // sem corte de tempo = historico inteiro
+  if (allEntries.length === 0) return null;
+
+  const earliestMs = Math.min(...allEntries.map((e) => e.timestamp));
+  const daysOfHistory = (Date.now() - earliestMs) / ONE_DAY_MS;
+  if (daysOfHistory < 6) return null;
+
+  const dailyLast30 = getThirtyDayHeatmap();
+  const values = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    values.push(dailyLast30[key] || 0);
+  }
+  values.sort((a, b) => a - b);
+  return values[3]; // mediana de 7 valores = o do meio, apos ordenar
+}
+
 // Nome da ultima tool_use dentro da janela informada (default: 90s, mesma
 // escala do estado "working"). Usado so pra escolher o icone de acao —
 // nao afeta calculo de tokens.
@@ -213,6 +237,7 @@ module.exports = {
   getLastActivityMs,
   getLastToolUse,
   getSessionHistory,
+  getSevenDayMedian,
 };
 
 if (require.main === module) {
