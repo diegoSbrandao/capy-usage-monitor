@@ -37,6 +37,14 @@ function tokensForEntry(usage) {
 function readEntries(sinceMs) {
   const cutoff = sinceMs ? Date.now() - sinceMs : 0;
   const entries = [];
+  // O Claude Code grava cada bloco de conteudo (thinking/text/tool_use)
+  // de UMA resposta da API como uma linha "assistant" separada no
+  // .jsonl, repetindo o `usage` inteiro da resposta em cada linha. Sem
+  // deduplicar por `message.id`, cada resposta com pensamento estendido
+  // (quase sempre 2-3 blocos) e contada 2-3x - inflava o total em ~45%
+  // numa sessao real. So conta tokens na 1a linha de cada id; linhas
+  // seguintes so contribuem conteudo extra (pra achar tool_use).
+  const seenById = new Map();
   for (const file of listTranscriptFiles()) {
     let raw;
     try {
@@ -55,12 +63,22 @@ function readEntries(sinceMs) {
       if (obj.type !== 'assistant' || !obj.message || !obj.message.usage) continue;
       const ts = Date.parse(obj.timestamp);
       if (Number.isNaN(ts) || ts < cutoff) continue;
-      entries.push({
+      const id = obj.message.id;
+      if (id && seenById.has(id)) {
+        const existing = seenById.get(id);
+        if (Array.isArray(obj.message.content)) {
+          existing.content = (existing.content || []).concat(obj.message.content);
+        }
+        continue;
+      }
+      const entry = {
         timestamp: ts,
         model: obj.message.model || 'unknown',
         tokens: tokensForEntry(obj.message.usage),
         content: obj.message.content,
-      });
+      };
+      if (id) seenById.set(id, entry);
+      entries.push(entry);
     }
   }
   return entries;
@@ -180,6 +198,11 @@ function parseSessionFile(file) {
   let cacheCreationTokens = 0;
   let cacheReadTokens = 0;
   const tokensByModel = {};
+  // Mesmo motivo do dedup em readEntries(): cada resposta da API vira
+  // varias linhas "assistant" (uma por bloco de conteudo), todas com o
+  // `usage` inteiro repetido - sem isso, entryCount/totalTokens ficam
+  // ~2x inflados numa sessao com pensamento estendido.
+  const seenIds = new Set();
 
   for (const line of raw.split('\n')) {
     if (!line.trim()) continue;
@@ -194,6 +217,9 @@ function parseSessionFile(file) {
     if (Number.isNaN(ts)) continue;
     if (startMs == null || ts < startMs) startMs = ts;
     if (endMs == null || ts > endMs) endMs = ts;
+    const id = obj.message.id;
+    if (id && seenIds.has(id)) continue;
+    if (id) seenIds.add(id);
     const u = obj.message.usage;
     const tokens = tokensForEntry(u);
     totalTokens += tokens;
