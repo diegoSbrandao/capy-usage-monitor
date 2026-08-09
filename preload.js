@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('capyApi', {
   requestSnapshot: () => ipcRenderer.invoke('usage:request'),
   exportXlsx: () => ipcRenderer.invoke('usage:exportXlsx'),
+  analyzeSpend: () => ipcRenderer.invoke('usage:analyzeSpend'),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
   onUpdate: (callback) => {
     ipcRenderer.on('usage:update', (_event, snapshot) => callback(snapshot));

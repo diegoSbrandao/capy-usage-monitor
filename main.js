@@ -23,6 +23,7 @@ const HISTORY_XLSX_PATH = path.join(DATA_DIR, 'historico-sessoes.xlsx');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 const ATTENTION_PATH = path.join(DATA_DIR, 'attention.json');
 const ATTENTION_MAX_AGE_MS = 5 * 60 * 1000;
+const SPEND_ALERT_COLD_GAP_MS = 10 * 60 * 1000;
 
 const FULL_SIZE = { width: 320, height: 620 };
 const COMPACT_SIZE = { width: 126, height: 148 };
@@ -248,6 +249,23 @@ function buildSnapshot() {
   );
   snap.attention = isAttentionActive(snap.lastActivityMs);
 
+  // "Gasto excessivo desnecessario": liga se a media de tokens/mensagem
+  // da sessao atual estiver na faixa "Excessiva" (mesmo corte do Excel,
+  // relativo ao proprio historico) OU se a sessao (5h) estiver perto/no
+  // teto - qualquer um dos dois. So considera sessoes "frias" (sem
+  // atividade ha pelo menos SPEND_ALERT_COLD_GAP_MS) como referencia de
+  // historico, senao a sessao em andamento (naturalmente a mais
+  // "verbosa" por ainda estar rodando) se compararia com ela mesma.
+  const coldSessions = usage.getSessionHistory().filter(
+    (s) => Date.now() - s.endMs > SPEND_ALERT_COLD_GAP_MS
+  );
+  const maxHistoricalAvg = Math.max(0, ...coldSessions.map((s) => s.avgTokensPerMessage));
+  const currentAvg = snap.currentSession.entryCount > 0
+    ? snap.currentSession.totalTokens / snap.currentSession.entryCount
+    : 0;
+  const avgTier = usage.tierForAvgTokensPerMessage(currentAvg, maxHistoricalAvg);
+  snap.spendAlert = avgTier === 'bad' || snap.ratios.session >= 0.9;
+
   return snap;
 }
 
@@ -353,13 +371,6 @@ const EVAL_TIER_LABEL = {
   bad: 'Excessiva',
 };
 
-function evalTierFor(avgTokensPerMessage, maxAvgTokensPerMessage) {
-  const ratio = maxAvgTokensPerMessage > 0 ? avgTokensPerMessage / maxAvgTokensPerMessage : 0;
-  if (ratio >= 0.9) return 'bad';
-  if (ratio >= 0.6) return 'warn';
-  return 'ok';
-}
-
 async function exportHistorySessions() {
   const sessions = usage.getSessionHistory();
   const maxAvgTokensPerMessage = Math.max(1, ...sessions.map((s) => s.avgTokensPerMessage));
@@ -398,7 +409,7 @@ async function exportHistorySessions() {
     'Relativa a sessao mais verbosa (mais tokens/mensagem) do proprio historico exportado, nao um numero oficial da Anthropic. <60% do pior caso = boa pratica, 60-90% = pode melhorar, >=90% = excessiva.';
 
   for (const s of sessions) {
-    const tier = evalTierFor(s.avgTokensPerMessage, maxAvgTokensPerMessage);
+    const tier = usage.tierForAvgTokensPerMessage(s.avgTokensPerMessage, maxAvgTokensPerMessage);
     const row = sheet.addRow({
       sessionId: s.sessionId.slice(0, 8),
       project: s.project,
@@ -444,6 +455,7 @@ ipcMain.handle('usage:exportXlsx', async () => {
   await exportHistorySessions();
   return HISTORY_XLSX_PATH;
 });
+ipcMain.handle('usage:analyzeSpend', () => usage.analyzeSessionCost());
 ipcMain.handle('window:hide', () => {
   if (mainWindow) mainWindow.hide();
 });

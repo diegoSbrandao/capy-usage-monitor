@@ -271,6 +271,105 @@ function getSessionHistory() {
   return sessions;
 }
 
+// Classificacao de "verbosidade" de uma sessao: media de tokens por
+// mensagem, relativa a sessao mais verbosa de um conjunto de referencia
+// (normalmente o proprio historico local do usuario) — nao um numero
+// absoluto inventado, mesma logica de honestidade de dados usada em
+// getSevenDayMedian(). Usada tanto no export Excel (evaluation por
+// sessao) quanto no alerta ao vivo do mascote.
+function tierForAvgTokensPerMessage(avg, maxAvg) {
+  const ratio = maxAvg > 0 ? avg / maxAvg : 0;
+  if (ratio >= 0.9) return 'bad';
+  if (ratio >= 0.6) return 'warn';
+  return 'ok';
+}
+
+// Analise ao vivo do que esta pesando na janela de 5h: le tanto as
+// linhas "assistant" (usage, dedupe por message.id) quanto as "user"
+// (tool_result) pra achar qual ferramenta produziu mais volume de
+// texto de retorno (Read de arquivo grande, saida de Bash, relatorio
+// de um subagente Task/Agent, etc). approxTokens de tool_result e uma
+// estimativa grosseira por tamanho de texto (chars/4) — nao vem com
+// `usage` proprio, só a resposta inteira da API tem esse dado.
+function analyzeSessionCost(sinceMs) {
+  const windowMs = sinceMs == null ? FIVE_HOURS_MS : sinceMs;
+  const cutoff = Date.now() - windowMs;
+  const toolNameById = {};
+  const byTool = {};
+  const seenIds = new Set();
+  let totalTokens = 0;
+  let entryCount = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let cacheCreationTokens = 0;
+  let cacheReadTokens = 0;
+
+  for (const file of listTranscriptFiles()) {
+    let raw;
+    try {
+      raw = fs.readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      let obj;
+      try {
+        obj = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const ts = Date.parse(obj.timestamp);
+      if (Number.isNaN(ts) || ts < cutoff) continue;
+
+      if (obj.type === 'assistant' && obj.message && obj.message.usage) {
+        if (Array.isArray(obj.message.content)) {
+          for (const c of obj.message.content) {
+            if (c.type === 'tool_use' && c.id && c.name) toolNameById[c.id] = c.name;
+          }
+        }
+        const id = obj.message.id;
+        if (id && seenIds.has(id)) continue;
+        if (id) seenIds.add(id);
+        const u = obj.message.usage;
+        totalTokens += tokensForEntry(u);
+        entryCount += 1;
+        inputTokens += u.input_tokens || 0;
+        outputTokens += u.output_tokens || 0;
+        cacheCreationTokens += u.cache_creation_input_tokens || 0;
+        cacheReadTokens += u.cache_read_input_tokens || 0;
+      } else if (obj.type === 'user' && obj.message && Array.isArray(obj.message.content)) {
+        for (const c of obj.message.content) {
+          if (c.type !== 'tool_result') continue;
+          const name = toolNameById[c.tool_use_id] || 'outro';
+          const text = typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '');
+          const approxTokens = Math.round(text.length / 4);
+          byTool[name] = byTool[name] || { count: 0, approxTokens: 0 };
+          byTool[name].count += 1;
+          byTool[name].approxTokens += approxTokens;
+        }
+      }
+    }
+  }
+
+  const topOffenders = Object.entries(byTool)
+    .map(([name, v]) => ({ name, count: v.count, approxTokens: v.approxTokens }))
+    .sort((a, b) => b.approxTokens - a.approxTokens)
+    .slice(0, 5);
+
+  return {
+    windowHours: windowMs / (60 * 60 * 1000),
+    totalTokens,
+    entryCount,
+    avgTokensPerMessage: entryCount > 0 ? totalTokens / entryCount : 0,
+    inputTokens,
+    outputTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
+    topOffenders,
+  };
+}
+
 function getSnapshot() {
   const dailyLast30 = getThirtyDayHeatmap();
   const weeklyByModel = getWeeklyModelBreakdown();
@@ -295,6 +394,8 @@ module.exports = {
   getLastToolUse,
   getSessionHistory,
   getSevenDayMedian,
+  tierForAvgTokensPerMessage,
+  analyzeSessionCost,
 };
 
 if (require.main === module) {

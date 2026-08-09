@@ -11,6 +11,9 @@ const heatmapEl = document.getElementById('heatmap');
 const heatmapTotalEl = document.getElementById('heatmapTotal');
 const exportBtn = document.getElementById('exportBtn');
 const closeBtn = document.getElementById('closeBtn');
+const spendPanelEl = document.getElementById('spendPanel');
+const spendPanelBodyEl = document.getElementById('spendPanelBody');
+const spendCloseBtn = document.getElementById('spendCloseBtn');
 
 const metrics = {
   session: {
@@ -101,6 +104,31 @@ function formatTokens(n) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
+}
+
+// Texto explicando o que pesou na sessao, a partir do retorno de
+// window.capyApi.analyzeSpend() (dados brutos, ver usage.js::
+// analyzeSessionCost). Formatacao fica no renderer de proposito - o
+// main/usage.js so fornece numeros, nao decide o texto pro usuario.
+function formatSpendAnalysis(a) {
+  const cacheSharePct = a.totalTokens > 0 ? Math.round((a.cacheReadTokens / a.totalTokens) * 100) : 0;
+  const offenders = a.topOffenders.filter((o) => o.approxTokens > 0);
+
+  const lines = [];
+  lines.push(`Ultimas ${a.windowHours}h: ${formatTokens(a.totalTokens)} tokens em ${a.entryCount} mensagens (media ${formatTokens(Math.round(a.avgTokensPerMessage))}/mensagem).`);
+  lines.push('');
+  lines.push(`${cacheSharePct}% disso e contexto relido a cada resposta (nao mensagem nova) - cresce conforme a conversa fica longa e nao diminui sozinho, so comecando uma conversa nova.`);
+  if (offenders.length > 0) {
+    lines.push('');
+    lines.push('O que mais engordou o contexto nessa janela:');
+    for (const o of offenders) {
+      lines.push(`  - ${o.name}: ~${formatTokens(o.approxTokens)} tokens (${o.count}x)`);
+    }
+  }
+  lines.push('');
+  lines.push('O que fazer: tarefa sem relacao com a atual, comece uma conversa nova (/clear) em vez de continuar essa. Evite pedir leitura de arquivos gigantes inteiros quando um trecho resolve. Prefira pergunta direta a um sub-agente quando der - o relatorio de um sub-agente fica grudado no contexto pro resto da conversa, sendo relido (e cobrado) em todo turno seguinte.');
+
+  return lines.join('\n');
 }
 
 function formatDuration(ms) {
@@ -311,7 +339,7 @@ function renderCompactPct(ratio) {
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset, spendAlert } = snapshot;
 
   renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
@@ -354,6 +382,7 @@ function render(snapshot) {
   if (currentTransient) sparkEl.classList.add(currentTransient);
   sparkEl.classList.toggle('flagged', !!dailyAlert);
   sparkEl.classList.toggle('attention', !!attention);
+  sparkEl.classList.toggle('spendAlert', !!spendAlert);
 
   // Prioridade: precisa de voce agora (terminal) > acabou de renovar >
   // meta diaria > estado normal. Reset so aparece durante a propria
@@ -376,7 +405,20 @@ function render(snapshot) {
 window.capyApi.onUpdate(render);
 window.capyApi.requestSnapshot().then(render);
 
-sparkEl.addEventListener('click', () => addTransient('poked', 400));
+sparkEl.addEventListener('click', () => {
+  addTransient('poked', 400);
+  if (lastSnapshot && lastSnapshot.spendAlert) {
+    spendPanelEl.classList.remove('hidden');
+    spendPanelBodyEl.textContent = 'Analisando...';
+    window.capyApi.analyzeSpend().then((analysis) => {
+      spendPanelBodyEl.textContent = formatSpendAnalysis(analysis);
+    });
+  }
+});
+
+spendCloseBtn.addEventListener('click', () => {
+  spendPanelEl.classList.add('hidden');
+});
 
 exportBtn.addEventListener('click', () => {
   window.capyApi.exportXlsx();

@@ -73,6 +73,14 @@
     <button id="exportBtn" class="btn-outline">Exportar Excel (por sessao)</button>
   </div>
 
+  <div id="spendPanel" class="spend-panel hidden">
+    <div class="spend-panel-header">
+      <span>Por que essa sessao esta pesando</span>
+      <button id="spendCloseBtn" title="Fechar">&#x2715;</button>
+    </div>
+    <div id="spendPanelBody" class="spend-panel-body">Analisando...</div>
+  </div>
+
   <div class="scene" id="scene">
     <div class="clock-chip">
       <span class="clock-dot"></span>
@@ -183,6 +191,7 @@
       </div>
       <div class="spark-zzz">Z z z</div>
       <div class="attention-badge"></div>
+      <div class="spend-badge" title="Clique em mim: sessao gastando token demais"></div>
 
       <div class="flag">
         <div class="flag-pole"></div>

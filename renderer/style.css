@@ -758,6 +758,84 @@ body.compact { overflow: hidden; }
   75% { transform: rotate(4deg); }
 }
 
+/* Aviso "essa sessao ta gastando token demais" — tokens/mensagem na
+   faixa "Excessiva" do proprio historico OU perto/no teto da sessao.
+   Canto oposto ao attention-badge pra nao sobrepor se os dois ligarem
+   juntos. Clicavel: abre o #spendPanel com a analise ao vivo. */
+.spend-badge {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: oklch(0.65 0.19 25);
+  color: oklch(0.96 0.01 90);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0);
+  box-shadow: 0 0 10px 2px oklch(0.65 0.19 25 / 0.55);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 2;
+  cursor: pointer;
+}
+.spend-badge::before { content: "¢"; }
+.spark.spendAlert .spend-badge {
+  opacity: 1;
+  transform: scale(1);
+  animation: spendBounce 0.8s ease-in-out infinite;
+}
+@keyframes spendBounce {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.15) translateY(-3px); }
+}
+
+/* --- Painel "por que essa sessao esta pesando" (clique no spend-badge) --- */
+.spend-panel {
+  padding: 14px 16px;
+  background: oklch(0.145 0.007 260);
+  border-bottom: 1px solid oklch(0.26 0.008 260);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.spend-panel.hidden { display: none; }
+.spend-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: oklch(0.9 0.006 260);
+}
+.spend-panel-header button {
+  background: none;
+  border: none;
+  color: oklch(0.7 0.01 260);
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.7;
+}
+.spend-panel-header button:hover { opacity: 1; }
+.spend-panel-body {
+  background: oklch(0.20 0.008 260);
+  border: 1px solid oklch(0.27 0.008 260);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: oklch(0.82 0.006 260);
+  white-space: pre-wrap;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.spend-panel-body strong { color: oklch(0.9 0.006 260); }
+
 /* --- Props: xicara ou TV (light, alterna pra dar variedade), cards
    contextuais por ferramenta (working) --- idle nao tem prop nenhum: so
    o personagem parado, igual ao gif de referencia (sem cama/sono). */
