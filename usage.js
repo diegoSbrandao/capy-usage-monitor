@@ -230,6 +230,7 @@ function parseSessionFile(file) {
     outputTokens,
     cacheCreationTokens,
     cacheReadTokens,
+    avgTokensPerMessage: totalTokens / entryCount,
   };
 }
 

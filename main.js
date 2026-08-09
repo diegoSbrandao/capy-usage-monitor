@@ -327,8 +327,34 @@ function formatModelBreakdown(tokensByModel) {
     .join(', ');
 }
 
+// Avaliacao de "boa pratica" por sessao: media de tokens/mensagem,
+// relativa a sessao mais verbosa do PROPRIO historico exportado (nao um
+// numero absoluto inventado - mesma logica de "dado real, sem
+// benchmark oficial" ja usada em getSevenDayMedian). Mesmas 3 cores do
+// esquema de %-uso ja usado no widget (renderCompactPct em renderer.js:
+// verde/amarelo/vermelho), so os cortes mudam (60%/90% do pior caso,
+// nao 41%/80% de um teto).
+const EVAL_TIER_COLOR = {
+  ok: 'FFD9F5E3', // tinta clara do verde #3ee673
+  warn: 'FFFFF3C4', // tinta clara do amarelo #ffd23f
+  bad: 'FFFFD6D1', // tinta clara do vermelho #ff4d3d
+};
+const EVAL_TIER_LABEL = {
+  ok: 'Boa pratica',
+  warn: 'Pode melhorar',
+  bad: 'Excessiva',
+};
+
+function evalTierFor(avgTokensPerMessage, maxAvgTokensPerMessage) {
+  const ratio = maxAvgTokensPerMessage > 0 ? avgTokensPerMessage / maxAvgTokensPerMessage : 0;
+  if (ratio >= 0.9) return 'bad';
+  if (ratio >= 0.6) return 'warn';
+  return 'ok';
+}
+
 async function exportHistorySessions() {
   const sessions = usage.getSessionHistory();
+  const maxAvgTokensPerMessage = Math.max(1, ...sessions.map((s) => s.avgTokensPerMessage));
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Spark Monitor';
@@ -352,14 +378,19 @@ async function exportHistorySessions() {
     { header: 'Modelo principal', key: 'topModel', width: 22 },
     { header: 'Modelos (detalhe)', key: 'modelBreakdown', width: 30 },
     { header: 'Mensagens', key: 'entryCount', width: 12 },
+    { header: 'Tokens/mensagem', key: 'avgTokensPerMessage', width: 16 },
+    { header: 'Avaliacao', key: 'evaluation', width: 16 },
   ];
 
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true, color: { argb: 'FF1B1712' } };
   headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97757' } };
   headerRow.alignment = { vertical: 'middle' };
+  headerRow.getCell('evaluation').note =
+    'Relativa a sessao mais verbosa (mais tokens/mensagem) do proprio historico exportado, nao um numero oficial da Anthropic. <60% do pior caso = boa pratica, 60-90% = pode melhorar, >=90% = excessiva.';
 
   for (const s of sessions) {
+    const tier = evalTierFor(s.avgTokensPerMessage, maxAvgTokensPerMessage);
     const row = sheet.addRow({
       sessionId: s.sessionId.slice(0, 8),
       project: s.project,
@@ -374,6 +405,8 @@ async function exportHistorySessions() {
       topModel: s.topModel,
       modelBreakdown: formatModelBreakdown(s.tokensByModel),
       entryCount: s.entryCount,
+      avgTokensPerMessage: Math.round(s.avgTokensPerMessage),
+      evaluation: EVAL_TIER_LABEL[tier],
     });
     row.getCell('start').numFmt = 'dd/mm/yyyy hh:mm';
     row.getCell('end').numFmt = 'dd/mm/yyyy hh:mm';
@@ -382,6 +415,10 @@ async function exportHistorySessions() {
     row.getCell('outputTokens').numFmt = '#,##0';
     row.getCell('cacheCreationTokens').numFmt = '#,##0';
     row.getCell('cacheReadTokens').numFmt = '#,##0';
+    row.getCell('avgTokensPerMessage').numFmt = '#,##0';
+    row.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EVAL_TIER_COLOR[tier] } };
+    });
   }
 
   fs.mkdirSync(path.dirname(HISTORY_XLSX_PATH), { recursive: true });
