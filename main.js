@@ -101,17 +101,25 @@ function isAttentionActive(lastActivityMs) {
   return true;
 }
 
-function saveSettings(next) {
-  settings = {
-    dailyAlertEnabled: !!next.dailyAlertEnabled,
-    dailyAlertPercent: Math.max(0, Math.min(100, Number(next.dailyAlertPercent))) || 0,
-  };
+function persistSettingsToDisk() {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf8');
   } catch {
     // best-effort: se nao conseguir persistir, vale so pra sessao atual.
   }
+}
+
+function saveSettings(next) {
+  // Merge, nao substitui inteiro: senao um save vindo so do painel de
+  // "meta diaria" (que nao manda autoStartEnabled) apagaria a intencao
+  // de autostart guardada por setAutoStart().
+  settings = {
+    ...settings,
+    dailyAlertEnabled: !!next.dailyAlertEnabled,
+    dailyAlertPercent: Math.max(0, Math.min(100, Number(next.dailyAlertPercent))) || 0,
+  };
+  persistSettingsToDisk();
   return settings;
 }
 
@@ -469,14 +477,24 @@ ipcMain.handle('settings:save', (event, next) => {
   return saved;
 });
 
-// Abrir com o Windows: estado real fica no proprio SO (registro/pasta de
-// inicializacao), lido/escrito via app.setLoginItemSettings — nao guardamos
-// isso em settings.json pra nao correr o risco de desincronizar dos dois.
+// Abrir com o Windows: a fonte de verdade pra UI e a INTENCAO do usuario
+// (settings.autoStartEnabled), nao mais uma leitura ao vivo do registro
+// do Windows. Motivo: o Windows pode desligar a entrada de startup por
+// fora do app (reinstalar em outro caminho, "Startup impact" no Task
+// Manager, etc) sem o app saber - com a fonte de verdade sendo so o SO,
+// isso aparecia como "toggle volta desligado sozinho". Agora o app
+// reaplica a intencao salva no SO toda vez que abre (ver app.whenReady
+// abaixo), entao mesmo se o Windows tiver derrubado o registro, o
+// proximo lancamento do app (manual ou por acaso ainda estar no
+// startup) conserta sozinho.
 // Em dev (`electron .`) o execPath e o binario do Electron, entao precisa
 // apontar path/args pro projeto explicitamente; empacotado, o exe ja e o
 // app certo, nao precisa de nada extra.
-function getAutoStart() {
+function osReportsAutoStart() {
   return app.getLoginItemSettings().openAtLogin;
+}
+function getAutoStart() {
+  return !!settings.autoStartEnabled;
 }
 function setAutoStart(enabled) {
   if (app.isPackaged) {
@@ -488,6 +506,8 @@ function setAutoStart(enabled) {
       args: [path.resolve(process.argv[1] || '.')],
     });
   }
+  settings = { ...settings, autoStartEnabled: enabled };
+  persistSettingsToDisk();
   return getAutoStart();
 }
 
@@ -542,6 +562,15 @@ ipcMain.handle('auth:profile', async () => {
 app.whenReady().then(() => {
   createWindow();
   createTray();
+  // Reafirma "abrir com o Windows" a cada lancamento, segundo a ultima
+  // intencao salva - se settings.json ainda nao tem esse campo (versao
+  // anterior a esse fix), usa o que o SO ja reportava como ponto de
+  // partida, pra nao desligar de surpresa algo que o usuario ja tinha
+  // ligado antes.
+  const desiredAutoStart = typeof settings.autoStartEnabled === 'boolean'
+    ? settings.autoStartEnabled
+    : osReportsAutoStart();
+  setAutoStart(desiredAutoStart);
   pushSnapshot();
   pollTimer = setInterval(pushSnapshot, config.pollIntervalMs);
   if (auth.isConnected()) pollUsage();

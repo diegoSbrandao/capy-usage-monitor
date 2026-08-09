@@ -83,12 +83,27 @@ extrair o HTML de verdade.
   e reposiciona a janela num canto — ver `FULL_SIZE`/`COMPACT_SIZE`),
   `settings:get`/`settings:save`, `autostart:get`/`autostart:set`
   (`getAutoStart()`/`setAutoStart()` — toggle "Abrir com o Windows" no
-  settings, usa `app.setLoginItemSettings()` direto, **nao** guarda esse
-  estado em `settings.json` porque a fonte de verdade e o proprio SO
-  (registro do Windows) e duplicar criaria risco de desincronizar; em dev
-  precisa passar `path: process.execPath, args: [...]` explicitamente
-  porque `process.execPath` em `electron .` aponta pro binario generico
-  do Electron, nao pro projeto — sem isso o atalho de inicializacao abriria
+  settings, usa `app.setLoginItemSettings()` pra aplicar no SO. **Decisao
+  revertida** (2026-08-09): a versao anterior nao guardava esse estado em
+  `settings.json`, so lia `app.getLoginItemSettings().openAtLogin` ao
+  vivo — na pratica isso desincronizava sozinho (Windows pode derrubar a
+  entrada de startup por fora do app: reinstalar em outro caminho,
+  "Startup impact" do Task Manager, etc), e o app nunca reaplicava,
+  entao o toggle "voltava desligado sozinho" depois de reiniciar o
+  Windows, mesmo com o usuario tendo deixado ligado. Agora
+  `settings.autoStartEnabled` guarda a INTENCAO do usuario (fonte de
+  verdade pra UI, `getAutoStart()` le so isso) e `app.whenReady()`
+  reaplica essa intencao no SO a cada lancamento do app (`setAutoStart`
+  de novo, idempotente) — se o Windows tiver derrubado o registro, o
+  proximo lancamento do app conserta sozinho. Migracao: se
+  `settings.json` for de antes desse fix (sem o campo), usa o que o SO
+  ja reportava como ponto de partida, pra nao desligar de surpresa algo
+  que o usuario ja tinha ligado. `saveSettings()` faz merge (`...settings`)
+  em vez de substituir o objeto inteiro, senao um save vindo so do
+  painel de meta diaria apagaria `autoStartEnabled`. Em dev precisa
+  passar `path: process.execPath, args: [...]` explicitamente porque
+  `process.execPath` em `electron .` aponta pro binario generico do
+  Electron, nao pro projeto — sem isso o atalho de inicializacao abriria
   o Electron vazio).
 - `settings.json` (em `~/.capy-usage-monitor/`, fora do repo) — unica
   preferencia editavel pelo usuario via UI (engrenagem): `dailyAlertEnabled`
