@@ -850,8 +850,7 @@ body.compact { overflow: hidden; }
 .heatmap .cell[data-level="4"] { background: #d03b3b; }
 
 .export-btn {
-  margin: 10px 14px 16px;
-  width: calc(100% - 28px);
+  width: 100%;
   padding: 10px;
   border: none;
   border-radius: 8px;
@@ -865,6 +864,12 @@ body.compact { overflow: hidden; }
 }
 .export-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(27, 175, 122, 0.5); }
 .export-btn:active { transform: translateY(0); }
+
+.settings-divider {
+  height: 1px;
+  background: #33291b;
+  margin: 4px 0 2px;
+}
 
 /* --- Modo compacto: bem pequeno, so o personagem + status + %, sem
    decoracao de fundo (relogio/sol/lua/nuvens/estrelas). A janela em si

@@ -171,8 +171,13 @@ function buildSnapshot() {
     : null;
 
   snap.settings = settings;
+  // O usuario compara o percentual do alerta contra o mesmo numero que ve
+  // em "Sessao (5h)" (snap.ratios.session) — a unica porcentagem 0-100%
+  // real e sempre visivel na tela. "Hoje"/ratios.daily e uma estimativa
+  // local que pode passar de 1000% numa sessao de trabalho longa, entao
+  // nao serve de base pro alerta (ja tentamos, gerou confusao repetida).
   snap.dailyAlert = !!(
-    settings.dailyAlertEnabled && snap.ratios.daily >= settings.dailyAlertPercent / 100
+    settings.dailyAlertEnabled && snap.ratios.session >= settings.dailyAlertPercent / 100
   );
 
   return snap;
