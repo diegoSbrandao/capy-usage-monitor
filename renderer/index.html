@@ -8,7 +8,26 @@
 <body>
   <div class="titlebar">
     <span>Spark Monitor</span>
-    <button id="closeBtn" title="Ocultar">&#x2715;</button>
+    <div class="titlebar-actions">
+      <button id="settingsBtn" title="Configuracoes">&#x2699;</button>
+      <button id="minimizeBtn" title="Modo compacto">&#x2013;</button>
+      <button id="closeBtn" title="Ocultar">&#x2715;</button>
+    </div>
+  </div>
+
+  <div id="settingsPanel" class="settings-panel hidden">
+    <div class="settings-row">
+      <label for="dailyAlertToggle">Avisar ao atingir limite diario</label>
+      <input type="checkbox" id="dailyAlertToggle" />
+    </div>
+    <div class="settings-row" id="dailyAlertPercentRow">
+      <label for="dailyAlertPercent">Percentual do limite</label>
+      <div class="settings-percent">
+        <input type="number" id="dailyAlertPercent" min="1" step="5" />
+        <span>%</span>
+      </div>
+    </div>
+    <button id="settingsSaveBtn" class="account-btn">Salvar</button>
   </div>
 
   <div class="account">
@@ -21,13 +40,19 @@
       <button id="submitCodeBtn" class="account-btn">Confirmar</button>
     </div>
     <div id="accountConnected" class="account-row hidden">
-      <span id="accountLabel" class="account-hint">conectado</span>
-      <button id="logoutBtn" class="account-btn subtle">Desconectar</button>
+      <span class="account-connected-label">
+        <span class="live-dot"></span>
+        <span id="accountLabel">conectado</span>
+      </span>
+      <button id="logoutBtn" class="account-btn outline">Desconectar</button>
     </div>
     <div id="accountError" class="account-error hidden"></div>
   </div>
 
-  <div class="scene">
+  <div class="scene" id="scene">
+    <div id="clock" class="clock">--:--</div>
+    <div class="sun"></div>
+    <div class="moon"></div>
     <div class="cloud cloud1"></div>
     <div class="cloud cloud2"></div>
     <span class="star s1">+</span>
@@ -45,8 +70,14 @@
         <div class="lens"></div>
         <div class="lens"></div>
       </div>
+      <div class="spark-zzz">Z z z</div>
       <div class="spark-leg left"></div>
       <div class="spark-leg right"></div>
+
+      <div class="flag">
+        <div class="flag-pole"></div>
+        <div class="flag-cloth"></div>
+      </div>
 
       <div class="prop mug">
         <div class="mug-cup"></div>
@@ -81,7 +112,10 @@
         <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
-    <div id="sparkStatus" class="spark-status">tranquilo</div>
+    <div class="spark-footer">
+      <div id="sparkStatus" class="spark-status">tranquilo</div>
+      <div id="compactPct" class="compact-pct">0%</div>
+    </div>
   </div>
 
   <div class="section">

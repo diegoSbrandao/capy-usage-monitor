@@ -27,13 +27,29 @@ const submitCodeBtn = document.getElementById('submitCodeBtn');
 const codeInput = document.getElementById('codeInput');
 const logoutBtn = document.getElementById('logoutBtn');
 
+const minimizeBtn = document.getElementById('minimizeBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const dailyAlertToggle = document.getElementById('dailyAlertToggle');
+const dailyAlertPercent = document.getElementById('dailyAlertPercent');
+const dailyAlertPercentRow = document.getElementById('dailyAlertPercentRow');
+const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+
+const clockEl = document.getElementById('clock');
+const sceneEl = document.getElementById('scene');
+const compactPctEl = document.getElementById('compactPct');
+
 let showingPasteRow = false;
 let profileRequested = false;
+let isCompact = false;
+
+const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
-  light: 'uma pausa pro cafe',
-  idle: 'dormindo',
+  idle: 'parado',
+  light: 'tomando cafe',
+  asleep: 'dormindo',
   hot: 'quase la...',
   alert: 'no limite!',
 };
@@ -133,6 +149,23 @@ function levelFor(tokens, max) {
   return 1;
 }
 
+function periodForHour(h) {
+  if (h >= 6 && h < 17) return 'day';
+  if (h >= 17 && h < 19) return 'afternoon';
+  return 'night';
+}
+
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  clockEl.textContent = `${hh}:${mm}`;
+  sceneEl.dataset.period = periodForHour(now.getHours());
+}
+
+updateClock();
+setInterval(updateClock, 15000);
+
 function renderHeatmap(dailyLast30) {
   heatmapEl.innerHTML = '';
   const days = [];
@@ -153,8 +186,16 @@ function renderHeatmap(dailyLast30) {
   }
 }
 
+function renderCompactPct(ratio) {
+  const pct = Math.round(ratio * 100);
+  compactPctEl.textContent = `${pct}%`;
+  compactPctEl.className = 'compact-pct';
+  if (ratio >= 1) compactPctEl.classList.add('danger');
+  else if (ratio >= 0.75) compactPctEl.classList.add('warn');
+}
+
 function render(snapshot) {
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, estimatedWeeklyCostUsd, activityState, toolCategory, real } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, estimatedWeeklyCostUsd, activityState, toolCategory, real, dailyAlert } = snapshot;
 
   renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderBar(bars.daily, snapshot.todayTokens, limits.daily, ratios.daily);
@@ -178,8 +219,10 @@ function render(snapshot) {
   if (toolCategory) sparkEl.dataset.tool = toolCategory;
   else delete sparkEl.dataset.tool;
   if (currentTransient) sparkEl.classList.add(currentTransient);
+  sparkEl.classList.toggle('flagged', !!dailyAlert);
 
-  sparkStatusEl.textContent = STATUS_LABEL[activityState] || activityState;
+  sparkStatusEl.textContent = dailyAlert ? FLAG_MESSAGE : (STATUS_LABEL[activityState] || activityState);
+  renderCompactPct(ratios.session);
 }
 
 window.capyApi.onUpdate(render);
@@ -224,4 +267,34 @@ window.capyApi.onAuthResult((result) => {
     accountErrorEl.textContent = result.error || 'falha ao conectar';
     accountErrorEl.classList.remove('hidden');
   }
+});
+
+minimizeBtn.addEventListener('click', () => {
+  isCompact = !isCompact;
+  document.body.classList.toggle('compact', isCompact);
+  minimizeBtn.title = isCompact ? 'Restaurar' : 'Modo compacto';
+  window.capyApi.setCompact(isCompact);
+});
+
+settingsBtn.addEventListener('click', () => {
+  settingsPanel.classList.toggle('hidden');
+  if (!settingsPanel.classList.contains('hidden')) {
+    window.capyApi.getSettings().then((s) => {
+      dailyAlertToggle.checked = !!s.dailyAlertEnabled;
+      dailyAlertPercent.value = s.dailyAlertPercent || 100;
+      dailyAlertPercentRow.classList.toggle('disabled', !s.dailyAlertEnabled);
+    });
+  }
+});
+
+dailyAlertToggle.addEventListener('change', () => {
+  dailyAlertPercentRow.classList.toggle('disabled', !dailyAlertToggle.checked);
+});
+
+settingsSaveBtn.addEventListener('click', () => {
+  window.capyApi.saveSettings({
+    dailyAlertEnabled: dailyAlertToggle.checked,
+    dailyAlertPercent: Number(dailyAlertPercent.value) || 100,
+  });
+  settingsPanel.classList.add('hidden');
 });

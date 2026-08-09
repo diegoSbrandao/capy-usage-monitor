@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, dialog, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, dialog, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -12,7 +12,13 @@ const activity = require('./activity');
 const auth = require('./auth');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
-const HISTORY_XLSX_PATH = path.join(os.homedir(), '.capy-usage-monitor', 'historico-sessoes.xlsx');
+const DATA_DIR = path.join(os.homedir(), '.capy-usage-monitor');
+const HISTORY_XLSX_PATH = path.join(DATA_DIR, 'historico-sessoes.xlsx');
+const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
+
+const FULL_SIZE = { width: 320, height: 720 };
+const COMPACT_SIZE = { width: 126, height: 148 };
+const COMPACT_MARGIN = 16;
 
 function loadConfig() {
   try {
@@ -23,7 +29,7 @@ function loadConfig() {
       dailyLimitTokens: 8000000,
       weeklyLimitTokens: 40000000,
       monthlyLimitTokens: 150000000,
-      activityThresholdsMs: { working: 90000, light: 900000 },
+      activityThresholdsMs: { working: 90000, coffeeAfter: 300000, sleepAfter: 600000 },
       pollIntervalMs: 15000,
       notifyThresholds: [0.75, 0.9, 1.0],
       startInTray: false,
@@ -32,10 +38,37 @@ function loadConfig() {
   }
 }
 
+// Configuracoes editaveis pelo usuario via UI (engrenagem), separadas do
+// config.json (que e pra ajuste manual/avancado). Vive em ~/.capy-usage-monitor
+// junto com auth.json e o export, fora do repo.
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
+  } catch {
+    return { dailyAlertEnabled: false, dailyAlertPercent: 100 };
+  }
+}
+
+function saveSettings(next) {
+  settings = {
+    dailyAlertEnabled: !!next.dailyAlertEnabled,
+    dailyAlertPercent: Math.max(1, Number(next.dailyAlertPercent) || 100),
+  };
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf8');
+  } catch {
+    // best-effort: se nao conseguir persistir, vale so pra sessao atual.
+  }
+  return settings;
+}
+
 let config = loadConfig();
+let settings = loadSettings();
 let mainWindow = null;
 let tray = null;
 let pollTimer = null;
+let isCompact = false;
 const notifiedThresholdsThisWindow = new Set();
 
 // ---- uso real via OAuth (percentual autoritativo, igual ao painel oficial) ----
@@ -117,13 +150,19 @@ function buildSnapshot() {
     snap.activityState = activity.computeState({
       lastActivityMs: snap.lastActivityMs,
       workingMs: config.activityThresholdsMs.working,
-      lightMs: config.activityThresholdsMs.light,
+      coffeeAfterMs: config.activityThresholdsMs.coffeeAfter,
+      sleepAfterMs: config.activityThresholdsMs.sleepAfter,
     });
   }
 
   snap.toolCategory = snap.activityState === 'working'
     ? activity.categorizeTool(usage.getLastToolUse(config.activityThresholdsMs.working))
     : null;
+
+  snap.settings = settings;
+  snap.dailyAlert = !!(
+    settings.dailyAlertEnabled && snap.ratios.daily >= settings.dailyAlertPercent / 100
+  );
 
   return snap;
 }
@@ -159,8 +198,8 @@ function pushSnapshot() {
 function createWindow() {
   mainWindow = new BrowserWindow({
     title: 'Spark Monitor',
-    width: 320,
-    height: 700,
+    width: FULL_SIZE.width,
+    height: FULL_SIZE.height,
     resizable: false,
     frame: false,
     alwaysOnTop: true,
@@ -256,6 +295,35 @@ ipcMain.handle('usage:exportXlsx', async () => {
 });
 ipcMain.handle('window:hide', () => {
   if (mainWindow) mainWindow.hide();
+});
+let savedFullBounds = null;
+
+ipcMain.handle('window:setCompact', (event, compact) => {
+  isCompact = !!compact;
+  if (!mainWindow) return isCompact;
+
+  if (isCompact) {
+    savedFullBounds = mainWindow.getBounds();
+    const { workArea } = screen.getDisplayMatching(savedFullBounds);
+    mainWindow.setBounds({
+      x: workArea.x + workArea.width - COMPACT_SIZE.width - COMPACT_MARGIN,
+      y: workArea.y + workArea.height - COMPACT_SIZE.height - COMPACT_MARGIN,
+      width: COMPACT_SIZE.width,
+      height: COMPACT_SIZE.height,
+    });
+  } else if (savedFullBounds) {
+    mainWindow.setBounds(savedFullBounds);
+  } else {
+    mainWindow.setSize(FULL_SIZE.width, FULL_SIZE.height);
+  }
+  return isCompact;
+});
+
+ipcMain.handle('settings:get', () => settings);
+ipcMain.handle('settings:save', (event, next) => {
+  const saved = saveSettings(next);
+  pushSnapshot();
+  return saved;
 });
 
 ipcMain.on('auth-start', () => shell.openExternal(auth.begin()));

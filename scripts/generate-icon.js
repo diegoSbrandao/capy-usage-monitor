@@ -61,7 +61,11 @@ function makePng(size, [r, g, b], drawFn) {
 }
 
 // Criatura pixel pessego simples: corpo + 2 pernas + olhos, inspirada no
-// bichinho do claude-usage-monitor mas desenhada do zero.
+// bichinho do claude-usage-monitor mas desenhada do zero. Sombreamento
+// leve (mais claro no topo/esquerda, mais escuro embaixo/direita) pra
+// combinar com o gradiente do personagem na UI.
+function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+
 function drawMascot(x, y) {
   const margin = 5;
   const legTop = 25;
@@ -74,7 +78,10 @@ function drawMascot(x, y) {
   if (inBody && y >= 12 && y < 15 && (x >= 10 && x < 13)) return [36, 26, 18, 255];
   if (inBody && y >= 12 && y < 15 && (x >= 19 && x < 22)) return [36, 26, 18, 255];
 
-  return inLeftLeg || inRightLeg ? [201, 122, 73, 255] : [221, 140, 94, 255];
+  if (inLeftLeg || inRightLeg) return [186, 106, 60, 255];
+
+  const t = (x - margin + y - margin) / (2 * (32 - margin * 2));
+  return [lerp(237, 201, t), lerp(166, 116, t), lerp(121, 63, t), 255];
 }
 
 const out = makePng(32, [221, 140, 94], drawMascot);

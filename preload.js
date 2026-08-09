@@ -17,4 +17,8 @@ contextBridge.exposeInMainWorld('capyApi', {
   onAuthResult: (callback) => {
     ipcRenderer.on('auth-result', (_event, result) => callback(result));
   },
+
+  setCompact: (compact) => ipcRenderer.invoke('window:setCompact', compact),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (next) => ipcRenderer.invoke('settings:save', next),
 });

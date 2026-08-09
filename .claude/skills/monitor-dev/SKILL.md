@@ -24,14 +24,16 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   snapshot JSON). Sempre valide mudanças aqui rodando esse comando antes de
   integrar no app.
 - `activity.js` — duas funcoes puras. `computeState({lastActivityMs, now,
-  workingMs, lightMs})` decide `working | light | idle` a partir de ha
-  quanto tempo veio a ultima atividade. `categorizeTool(name)` mapeia o
-  nome de uma tool_use (`Read`, `Edit`, `Bash`, etc.) pra uma categoria de
-  animação (`read | edit | run | other`). Ambas testaveis isolado com
-  `node activity.js` (bateria de casos de borda embutida). Os estados
-  `hot` (>=90%) e `alert` (>=100%, sessao estourou o limite) sao decididos
-  separadamente em `main.js::buildSnapshot`, com prioridade sobre o
-  resultado de `computeState`.
+  workingMs, coffeeAfterMs, sleepAfterMs})` decide, em ordem crescente de
+  inatividade, `working -> idle (parado, sem prop) -> light (cafe) ->
+  asleep (dormindo)`. `categorizeTool(name)` mapeia o nome de uma
+  tool_use (`Read`, `Edit`, `Bash`, etc.) pra uma categoria de animação
+  (`read | edit | run | other`). Ambas testaveis isolado com
+  `node activity.js` (bateria de casos de borda embutida, incluindo os 3
+  thresholds). Os estados `hot` (>=90%) e `alert` (>=100%, sessao
+  estourou o limite) sao decididos separadamente em
+  `main.js::buildSnapshot`, com prioridade sobre o resultado de
+  `computeState`.
 - `auth.js` — OAuth2 PKCE contra o mesmo client publico que o Claude Code
   usa (`CLIENT_ID` fixo). `begin()` monta a URL de autorizacao,
   `complete(code)` troca por tokens, `fetchUsage()` retorna o percentual
@@ -43,26 +45,46 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   backoff ate 30min em 429), calculo dos 4 ratios (session/daily/weekly/
   monthly) — session/weekly viram o percentual REAL quando
   `auth.isConnected()` e ha `realUsage` em cache — `activityState` final
-  (`working|light|idle|hot|alert`), `toolCategory`, notificações de
-  threshold, export de Excel por sessao (`exportHistorySessions`, usa
-  `exceljs`), handlers IPC `auth-start`/`auth-code`/`auth-logout`.
+  (`working|idle|light|asleep|hot|alert`), `toolCategory`, `dailyAlert`
+  (ver `settings.json` abaixo), notificações de threshold, export de
+  Excel por sessao (`exportHistorySessions`, usa `exceljs`), handlers IPC
+  `auth-start`/`auth-code`/`auth-logout`, `window:setCompact` (redimensiona
+  e reposiciona a janela num canto — ver `FULL_SIZE`/`COMPACT_SIZE`),
+  `settings:get`/`settings:save`.
+- `settings.json` (em `~/.capy-usage-monitor/`, fora do repo) — unicas
+  preferencias editaveis pelo usuario via UI (engrenagem):
+  `dailyAlertEnabled`, `dailyAlertPercent`. Diferente de `config.json`
+  (edição manual/avançada). `snap.dailyAlert` em `buildSnapshot()` é
+  `true` quando `dailyAlertEnabled` e `ratios.daily >= dailyAlertPercent/100`
+  — **sem teto artificial no percentual**: um teto baixo (ex.: max 300)
+  trava o alerta permanentemente ligado se o uso real do dia já passar
+  disso, e o usuario nao consegue "desarmar" subindo o valor. Se precisar
+  de um limite de sanidade no input, deixe bem alto.
 - `preload.js` — unica ponte entre renderer e main (`contextBridge`). Se
   adicionar uma nova acao que o renderer precisa pedir ao main, exponha
   aqui, nao habilite `nodeIntegration`.
 - `renderer/` — UI. `style.css` tem os estados do personagem (`.working`,
-  `.light`, `.idle`, `.hot`, `.alert` — mesmos nomes de `activityState`).
-  `idle` **nao tem prop nenhum** (so o personagem parado, igual ao
-  `idle.gif` de referencia — sem cama/sono). Em `working`, um `.card`
-  contextual aparece do lado do personagem conforme `[data-tool]`:
-  `.card-read` (arquivo com linhas tipo markdown), `.card-run` (terminal
-  com 3 pontinhos + status), `.card-edit` (linhas de "codigo" coloridas +
-  planta). `.mug` aparece só em `light` (pausa curta). Duas classes
-  efemeras controladas só no renderer (`.poked`, `.celebrating`), e a
-  secao `.account` (conectar/colar codigo/desconectar). `renderer.js::render()`
+  `.idle`, `.light`, `.asleep`, `.hot`, `.alert` — mesmos nomes de
+  `activityState`). `idle` **nao tem prop nenhum** (so o personagem
+  parado). `asleep` fecha os olhos e mostra `.spark-zzz`. Em `working`,
+  um `.card` contextual aparece do lado do personagem conforme
+  `[data-tool]`: `.card-read`, `.card-run`, `.card-edit`. `.mug` aparece
+  só em `light` (cafe). `.flag` (bandeirinha vermelha) é uma classe
+  `.flagged` **independente do activityState** — soma-se a qualquer
+  estado quando `snapshot.dailyAlert` é `true`, e nesse caso o texto de
+  status é substituido pela mensagem de `FLAG_MESSAGE` em `renderer.js`.
+  Duas classes efemeras controladas só no renderer (`.poked`,
+  `.celebrating`), a secao `.account` (conectar/colar codigo/desconectar),
+  e `#settingsPanel` (toggle do aviso de limite diario). `.clock` +
+  `#scene[data-period]` (`day`/`afternoon`/`night`, calculado em
+  `periodForHour()` a partir da hora local real, atualizado a cada 15s)
+  trocam o fundo/sol/lua/nuvens/estrelas. `body.compact` esconde tudo
+  exceto titlebar+personagem+status+`.compact-pct` — a janela em si é
+  redimensionada e reposicionada num canto pelo `main.js` (ver
+  `minimizeBtn` -> `window.capyApi.setCompact`). `renderer.js::render()`
   troca `className` do `#spark`, seta `dataset.tool`, atualiza as tags
-  "real"/"estimado" das barras de Sessao/Semana conforme `snapshot.real`,
-  e chama `updateAccountUI(snapshot.real.connected)` — nao ha logica de
-  decisao de estado no renderer, só orquestração.
+  "real"/"estimado", chama `updateAccountUI(snapshot.real.connected)` —
+  nao ha logica de decisao de estado no renderer, só orquestração.
 - `config.json` — unico lugar de configuração do usuário (limites diario/
   semanal/mensal/sessao — usados so quando NAO conectado —
   `activityThresholdsMs`, thresholds de notificação, preços). Nao

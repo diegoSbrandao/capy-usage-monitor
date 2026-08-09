@@ -21,10 +21,18 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
   enquanto você lê, um terminal enquanto roda comando, um "laptop" com
   linhas de código + planta enquanto edita — tudo troca sozinho conforme
   a ação detectada nos seus logs locais.
-- **Estados de humor**: toma café numa pausa curta, esquenta perto do
-  limite, fica em alerta no limite, e comemora quando a janela de 5h
-  renova.
+- **Estados de humor**: fica parado, toma café após uns minutos sem uso,
+  dorme depois de mais tempo ocioso, esquenta perto do limite, fica em
+  alerta no limite, e comemora quando a janela de 5h renova.
 - **Poke**: clique no personagem por uma reação.
+- **Relógio e cenário dia/tarde/noite**: hora local real no canto, com
+  céu, sol e nuvens mudando de cor conforme o horário (noite tem
+  estrelas e lua).
+- **Aviso de meta diária (engrenagem)**: ative e defina um percentual —
+  ao bater a meta, o personagem levanta uma bandeirinha vermelha e o
+  status vira uma mensagem de aviso.
+- **Modo compacto**: minimize pra um widget pequeno num canto da tela,
+  só com o personagem, o status e o percentual da sessão.
 - **Exportação em Excel por sessão** (`.xlsx` formatado, uma linha por
   sessão do Claude Code — não por dia).
 - Estimativa de custo em USD, notificações de threshold configuráveis.
@@ -63,13 +71,17 @@ Edite `config.json`:
   "dailyLimitTokens": 8000000,
   "weeklyLimitTokens": 40000000,
   "monthlyLimitTokens": 150000000,
-  "activityThresholdsMs": { "working": 90000, "light": 900000 },
+  "activityThresholdsMs": { "working": 90000, "coffeeAfter": 300000, "sleepAfter": 600000 },
   "pollIntervalMs": 15000,
   "notifyThresholds": [0.75, 0.9, 1.0],
   "startInTray": false,
   "pricingPerMillionTokens": { "...": "..." }
 }
 ```
+
+O aviso de meta diária (engrenagem no topo do widget) é salvo à parte, em
+`~/.capy-usage-monitor/settings.json` — não precisa editar esse arquivo à
+mão, use a UI.
 
 ## Como funciona por baixo dos panos
 

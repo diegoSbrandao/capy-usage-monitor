@@ -1,13 +1,25 @@
 * { box-sizing: border-box; }
 
+html, body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", sans-serif;
   background: #1b1712;
   color: #f1e9dd;
   user-select: none;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
+body::-webkit-scrollbar { width: 6px; }
+body::-webkit-scrollbar-track { background: transparent; }
+body::-webkit-scrollbar-thumb { background: #3a2f21; border-radius: 3px; }
+body::-webkit-scrollbar-thumb:hover { background: #4a3c28; }
+
+body.compact { overflow: hidden; }
 
 .titlebar {
   -webkit-app-region: drag;
@@ -20,22 +32,97 @@ body {
   font-weight: 600;
 }
 
+.titlebar-actions {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .titlebar button {
   -webkit-app-region: no-drag;
   background: none;
   border: none;
   color: #f1e9dd;
   cursor: pointer;
-  font-size: 12px;
-  opacity: 0.6;
+  font-size: 13px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.titlebar button:hover { opacity: 1; }
+.titlebar button:hover { opacity: 1; transform: translateY(-1px); }
+
+/* --- Painel de configuracoes (engrenagem) --- */
+.settings-panel {
+  padding: 12px 14px;
+  background: #1f1912;
+  border-bottom: 1px solid #33291b;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-panel.hidden { display: none; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+.settings-row label { color: #e3d8c4; }
+.settings-row input[type="checkbox"] {
+  width: 32px;
+  height: 18px;
+  appearance: none;
+  background: #3a2f21;
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.2s ease;
+}
+.settings-row input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cfc6b8;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.settings-row input[type="checkbox"]:checked {
+  background: linear-gradient(90deg, #d99a3f, #e0743a);
+}
+.settings-row input[type="checkbox"]:checked::before {
+  transform: translateX(14px);
+  background: #1b1712;
+}
+.settings-percent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #cfc6b8;
+}
+.settings-percent input {
+  width: 52px;
+  background: #12100c;
+  border: 1px solid #3a2f21;
+  border-radius: 5px;
+  color: #f1e9dd;
+  padding: 4px 6px;
+  font-size: 11px;
+}
+#dailyAlertPercentRow.disabled { opacity: 0.4; pointer-events: none; }
 
 /* --- Conta: conectar via OAuth pro percentual real --- */
 .account {
-  padding: 8px 14px;
-  background: #211b14;
-  border-bottom: 1px solid #2c241a;
+  margin: 10px 14px 0;
+  padding: 10px 12px;
+  background: linear-gradient(160deg, #3a2f21, #2a2117);
+  border: 1px solid #4a3c28;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 .account-row {
   display: flex;
@@ -45,53 +132,105 @@ body {
 }
 .account-row.hidden { display: none; }
 .account-hint {
-  font-size: 10px;
-  opacity: 0.6;
+  font-size: 10.5px;
+  color: #a89a82;
+}
+.account-connected-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.live-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4fd17a;
+  box-shadow: 0 0 6px 1px rgba(79, 209, 122, 0.6);
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+#accountLabel {
+  color: #e3d8c4;
+  font-weight: 600;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .account-btn {
   border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
+  border-radius: 6px;
+  padding: 6px 12px;
   font-size: 11px;
-  font-weight: 600;
-  color: #1b1712;
-  background: linear-gradient(90deg, #f0dfc8, #d97757);
+  font-weight: 700;
+  color: #201509;
+  background: linear-gradient(135deg, #f5deb0, #e0743a);
+  box-shadow: 0 2px 5px rgba(224, 116, 58, 0.35);
   cursor: pointer;
   white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.account-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(224, 116, 58, 0.5); }
+.account-btn:active { transform: translateY(0); }
 .account-btn.subtle {
   background: none;
-  color: #f1e9dd;
-  opacity: 0.6;
-  font-weight: 400;
+  box-shadow: none;
+  color: #cfc6b8;
+  opacity: 0.7;
+  font-weight: 500;
 }
-.account-btn.subtle:hover { opacity: 1; }
+.account-btn.subtle:hover { opacity: 1; transform: none; box-shadow: none; }
+
+.account-btn.outline {
+  background: none;
+  box-shadow: none;
+  color: #e88a6a;
+  border: 1px solid rgba(232, 138, 106, 0.4);
+  font-weight: 600;
+}
+.account-btn.outline:hover {
+  background: rgba(208, 59, 59, 0.12);
+  border-color: #d03b3b;
+  color: #f0836a;
+  transform: none;
+  box-shadow: none;
+}
 .code-input {
   flex: 1;
   min-width: 0;
-  background: #1b1712;
+  background: #12100c;
   border: 1px solid #3a2f21;
-  border-radius: 5px;
+  border-radius: 6px;
   color: #f1e9dd;
-  padding: 5px 7px;
+  padding: 6px 8px;
   font-size: 11px;
+}
+.code-input:focus {
+  outline: none;
+  border-color: #d99a3f;
 }
 .account-error {
   margin-top: 6px;
   font-size: 10px;
-  color: #e05b2e;
+  color: #f0836a;
 }
 .account-error.hidden { display: none; }
 
 .tag {
   font-size: 9px;
-  font-weight: 400;
+  font-weight: 600;
   opacity: 0.55;
   text-transform: lowercase;
+  letter-spacing: 0.02em;
 }
 .tag.real {
-  color: #d99a3f;
-  opacity: 0.9;
+  color: #4fd17a;
+  opacity: 1;
 }
 
 /* --- Cenario: pixel-art escuro inspirado nos gifs do claude-usage-monitor
@@ -109,7 +248,72 @@ body {
   border: 5px dotted #3a2f21;
   border-left: none;
   border-right: none;
+  transition: background 1.2s ease;
 }
+
+/* Periodos do dia (definidos via JS em renderer.js, hora local real) */
+.scene[data-period="day"] {
+  background: linear-gradient(180deg, #6ec3e8 0%, #bfe6f5 75%, #d9f0e0 100%);
+  border-color: #2a4a52;
+}
+.scene[data-period="afternoon"] {
+  background: linear-gradient(180deg, #ff9d5c 0%, #ffb37a 45%, #ffd39b 100%);
+  border-color: #5a2f1b;
+}
+.scene[data-period="night"] {
+  background: #0c0a08;
+}
+
+.clock {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #f1e9dd;
+  background: rgba(12, 10, 8, 0.55);
+  padding: 3px 6px;
+  border-radius: 3px;
+  z-index: 2;
+}
+.scene[data-period="day"] .clock,
+.scene[data-period="afternoon"] .clock { color: #2a1f14; background: rgba(255, 255, 255, 0.35); }
+
+.sun {
+  position: absolute;
+  top: 20px;
+  right: 26px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffd23f;
+  box-shadow:
+    0 0 0 4px rgba(255, 210, 63, 0.25),
+    0 0 18px 4px rgba(255, 210, 63, 0.5);
+  display: none;
+}
+.scene[data-period="day"] .sun { display: block; }
+.scene[data-period="afternoon"] .sun {
+  display: block;
+  top: 62px;
+  background: #ff8a3d;
+  box-shadow: 0 0 0 4px rgba(255, 138, 61, 0.25), 0 0 18px 4px rgba(255, 138, 61, 0.55);
+}
+
+.moon {
+  position: absolute;
+  top: 18px;
+  right: 26px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e8e2d6;
+  box-shadow: inset 5px -2px 0 0 #0c0a08, 0 0 10px 2px rgba(232, 226, 214, 0.35);
+  display: none;
+}
+.scene[data-period="night"] .moon { display: block; }
 
 .cloud {
   position: absolute;
@@ -130,6 +334,8 @@ body {
   50% { transform: translateX(14px); }
   100% { transform: translateX(0); }
 }
+.scene[data-period="day"] .cloud { background: #fff; box-shadow: 6px -6px 0 0 #fff, -6px 0 0 0 #fff, 12px 0 0 0 #fff; opacity: 0.9; }
+.scene[data-period="afternoon"] .cloud { background: #ffcba3; box-shadow: 6px -6px 0 0 #ffcba3, -6px 0 0 0 #ffcba3, 12px 0 0 0 #ffcba3; opacity: 0.85; }
 
 .star {
   position: absolute;
@@ -149,14 +355,34 @@ body {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.85; }
 }
+.scene[data-period="day"] .star,
+.scene[data-period="afternoon"] .star { display: none; }
 
-.spark-status {
+.spark-footer {
   position: absolute;
-  bottom: 2px;
+  bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.spark-status {
   font-size: 11px;
-  opacity: 0.75;
+  opacity: 0.8;
   text-transform: lowercase;
 }
+.scene[data-period="day"] .spark-status,
+.scene[data-period="afternoon"] .spark-status { color: #2a1f14; opacity: 0.85; }
+
+.compact-pct {
+  display: none;
+  font-size: 15px;
+  font-weight: 800;
+  color: #f0dfc8;
+  letter-spacing: 0.02em;
+}
+.compact-pct.warn { color: #fab219; }
+.compact-pct.danger { color: #ff6a5a; }
 
 /* --- Personagem: criatura pixel pessego/laranja simples (corpo + 2
    pernas + olhos), inspirada no bichinho do claude-usage-monitor mas
@@ -177,8 +403,12 @@ body {
   transform: translateX(-50%);
   width: 48px;
   height: 42px;
-  background: #dd8c5e;
+  background: linear-gradient(155deg, #eda679 0%, #dd8c5e 55%, #c9743f 100%);
   border-radius: 3px;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.12),
+    inset -3px -4px 0 rgba(0, 0, 0, 0.15),
+    0 3px 5px rgba(0, 0, 0, 0.3);
   image-rendering: pixelated;
 }
 
@@ -223,7 +453,7 @@ body {
 .spark-leg.left { left: 8px; }
 .spark-leg.right { right: 8px; }
 
-/* Estados (batem com activityState do main.js: working | light | idle | hot | alert) */
+/* Estados (batem com activityState do main.js: working | idle | light | asleep | hot | alert) */
 .spark.working { animation: bob 0.5s ease-in-out infinite; }
 @keyframes bob {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -242,13 +472,34 @@ body {
   50% { transform: translateY(-2px); }
 }
 
+.spark.asleep { animation: breathe 4.5s ease-in-out infinite; opacity: 0.85; }
+.spark.asleep .spark-eye { height: 2px; top: 20px; border-radius: 1px; }
+.spark-zzz {
+  position: absolute;
+  right: -4px;
+  top: -6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cfc6b8;
+  opacity: 0;
+}
+.spark.asleep .spark-zzz {
+  opacity: 1;
+  animation: floatUp 2.4s ease-in-out infinite;
+}
+@keyframes floatUp {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translateY(-14px); opacity: 0; }
+}
+
 .spark.hot .spark-shape {
-  background: #e0743a;
-  filter: drop-shadow(0 0 8px rgba(224, 91, 46, 0.6));
+  background: linear-gradient(155deg, #f5a468 0%, #ec835a 55%, #d9622e 100%);
+  filter: drop-shadow(0 0 8px rgba(236, 131, 90, 0.6));
 }
 .spark.hot { animation: bob 0.35s ease-in-out infinite; }
 
-.spark.alert .spark-shape { background: #c14a26; }
+.spark.alert .spark-shape { background: linear-gradient(155deg, #e56a52 0%, #d03b3b 55%, #a82c2c 100%); }
 .spark.alert { animation: shake 0.3s ease-in-out infinite; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -295,6 +546,40 @@ body {
 @keyframes burst {
   0% { transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1; }
   100% { transform: rotate(var(--a)) translateX(38px) scale(0.4); opacity: 0; }
+}
+
+/* Bandeira de alerta (configuravel via engrenagem, ver settings-panel):
+   soma-se a qualquer estado base, nao substitui a animacao normal. */
+.flag {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  transform-origin: bottom center;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.spark.flagged .flag { transform: translateX(-50%) scale(1); opacity: 1; }
+.flag-pole {
+  width: 2px;
+  height: 20px;
+  background: #8a7a5c;
+  margin: 0 auto;
+}
+.flag-cloth {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 14px;
+  height: 9px;
+  background: #d03b3b;
+  clip-path: polygon(0 0, 100% 20%, 0 100%);
+  animation: wave 1.2s ease-in-out infinite;
+  transform-origin: left center;
+}
+@keyframes wave {
+  0%, 100% { transform: skewY(0deg); }
+  50% { transform: skewY(6deg); }
 }
 
 /* --- Props: xicara (light), cards contextuais por ferramenta (working) ---
@@ -432,72 +717,112 @@ body {
 }
 
 .section {
-  padding: 8px 14px;
+  margin: 8px 14px 0;
+  padding: 10px 12px;
+  background: #1a150f;
+  border: 1px solid #2c2318;
+  border-radius: 8px;
 }
 
 .label-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font-size: 11px;
-  opacity: 0.85;
-  margin-bottom: 4px;
+  color: #cfc6b8;
+  margin-bottom: 6px;
 }
+.label-row > span:first-child { font-weight: 600; color: #e3d8c4; }
 
 .bar-track {
   width: 100%;
-  height: 8px;
-  background: #2c241a;
+  height: 7px;
+  background: #0f0c08;
   border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #8b623a, #c49a6c);
+  border-radius: 4px;
+  background: linear-gradient(90deg, #d99a3f, #f0dfc8);
   transition: width 0.4s ease, background 0.4s ease;
 }
-.bar-fill.warn { background: linear-gradient(90deg, #b5772c, #d99a3f); }
-.bar-fill.danger { background: linear-gradient(90deg, #b5502c, #e05b2e); }
+.bar-fill.warn { background: linear-gradient(90deg, #d99a3f, #fab219); }
+.bar-fill.danger { background: linear-gradient(90deg, #ec835a, #d03b3b); }
 
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 11px;
 }
 .model-list .model-row {
   display: flex;
   justify-content: space-between;
-  opacity: 0.85;
+  color: #cfc6b8;
 }
 
 .heatmap {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 .heatmap .cell {
   width: 100%;
   padding-top: 100%;
   position: relative;
   border-radius: 2px;
-  background: #2c241a;
+  background: #0f0c08;
+  transition: transform 0.1s ease;
 }
-.heatmap .cell[data-level="1"] { background: #4a3620; }
-.heatmap .cell[data-level="2"] { background: #6d4b2a; }
-.heatmap .cell[data-level="3"] { background: #8b623a; }
-.heatmap .cell[data-level="4"] { background: #c49a6c; }
+.heatmap .cell:hover { transform: scale(1.15); }
+.heatmap .cell[data-level="1"] { background: #5a3a1c; }
+.heatmap .cell[data-level="2"] { background: #a05a1e; }
+.heatmap .cell[data-level="3"] { background: #d97757; }
+.heatmap .cell[data-level="4"] { background: #f5c26b; }
 
 .export-btn {
-  margin: 6px 14px 14px;
+  margin: 10px 14px 16px;
   width: calc(100% - 28px);
-  padding: 8px;
+  padding: 10px;
   border: none;
-  border-radius: 6px;
-  background: #3a2f21;
-  color: #f1e9dd;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4fd17a, #1baf7a);
+  color: #0d2113;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(27, 175, 122, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.export-btn:hover { background: #4a3c2a; }
+.export-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(27, 175, 122, 0.5); }
+.export-btn:active { transform: translateY(0); }
+
+/* --- Modo compacto: bem pequeno, so o personagem + status + %, sem
+   decoracao de fundo (relogio/sol/lua/nuvens/estrelas). A janela em si
+   e reposicionada num canto da tela pelo main.js (window:setCompact). --- */
+body.compact .account,
+body.compact .settings-panel,
+body.compact .section,
+body.compact .export-btn {
+  display: none;
+}
+body.compact .titlebar { padding: 4px 6px; }
+body.compact .titlebar span { display: none; }
+body.compact .clock,
+body.compact .sun,
+body.compact .moon,
+body.compact .cloud,
+body.compact .star { display: none; }
+body.compact .scene {
+  height: auto;
+  padding: 6px 0 8px;
+  border-width: 3px;
+}
+body.compact .spark { margin-bottom: 4px; }
+body.compact .prop { display: none !important; }
+body.compact .compact-pct { display: block; }
+body.compact .spark-status { font-size: 10px; }

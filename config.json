@@ -5,7 +5,8 @@
   "monthlyLimitTokens": 150000000,
   "activityThresholdsMs": {
     "working": 90000,
-    "light": 900000
+    "coffeeAfter": 300000,
+    "sleepAfter": 600000
   },
   "pollIntervalMs": 15000,
   "notifyThresholds": [0.75, 0.9, 1.0],
