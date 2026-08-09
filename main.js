@@ -26,7 +26,7 @@ function loadConfig() {
   } catch {
     return {
       softSessionLimitTokens: 3000000,
-      dailyLimitTokens: 8000000,
+      dailyLimitTokens: 100000000,
       weeklyLimitTokens: 40000000,
       monthlyLimitTokens: 150000000,
       activityThresholdsMs: { working: 90000, coffeeAfter: 300000, sleepAfter: 600000 },
@@ -49,10 +49,20 @@ function loadSettings() {
   }
 }
 
+// "Limite diario" pro percentual do aviso é sempre config.dailyLimitTokens
+// (unico lugar de configuração — de proposito simples, so a % é editavel
+// pela UI). Se o uso do dia bater muito acima disso (ex.: uma sessao de
+// trabalho excepcionalmente longa), QUALQUER percentual vai disparar —
+// isso é matematicamente correto, nao um bug. Se isso acontecer sempre no
+// seu uso normal, suba `dailyLimitTokens` em config.json.
+function effectiveDailyLimit() {
+  return config.dailyLimitTokens;
+}
+
 function saveSettings(next) {
   settings = {
     dailyAlertEnabled: !!next.dailyAlertEnabled,
-    dailyAlertPercent: Math.max(1, Number(next.dailyAlertPercent) || 100),
+    dailyAlertPercent: Math.max(0, Math.min(100, Number(next.dailyAlertPercent))) || 0,
   };
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -112,15 +122,16 @@ function estimateCostUsd(weeklyByModel) {
 
 function buildSnapshot() {
   const snap = usage.getSnapshot();
+  const dailyLimit = effectiveDailyLimit();
   snap.limits = {
     session: config.softSessionLimitTokens,
-    daily: config.dailyLimitTokens,
+    daily: dailyLimit,
     weekly: config.weeklyLimitTokens,
     monthly: config.monthlyLimitTokens,
   };
   snap.ratios = {
     session: snap.currentSession.totalTokens / config.softSessionLimitTokens,
-    daily: snap.todayTokens / config.dailyLimitTokens,
+    daily: snap.todayTokens / dailyLimit,
     weekly: snap.weeklyTokens / config.weeklyLimitTokens,
     monthly: snap.monthlyTokens / config.monthlyLimitTokens,
   };

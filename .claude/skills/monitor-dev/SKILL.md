@@ -52,20 +52,20 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   `auth-start`/`auth-code`/`auth-logout`, `window:setCompact` (redimensiona
   e reposiciona a janela num canto — ver `FULL_SIZE`/`COMPACT_SIZE`),
   `settings:get`/`settings:save`.
-- `settings.json` (em `~/.capy-usage-monitor/`, fora do repo) — unicas
-  preferencias editaveis pelo usuario via UI (engrenagem):
-  `dailyAlertEnabled`, `dailyAlertPercent`. Diferente de `config.json`
-  (edição manual/avançada). `snap.dailyAlert` em `buildSnapshot()` é
-  `true` quando `dailyAlertEnabled` e `ratios.daily >= dailyAlertPercent/100`
-  — **sem teto artificial no percentual**: um teto baixo (ex.: max 300)
-  trava o alerta permanentemente ligado se o uso real do dia já passar
-  disso, e o usuario nao consegue "desarmar" subindo o valor. Se precisar
-  de um limite de sanidade no input, deixe bem alto. O painel de settings
-  mostra `#dailyCurrentHint` ("uso atual do dia: X%") calculado a partir
-  do ultimo `snapshot.ratios.daily` recebido — sem isso o usuario nao tem
-  como saber por que um percentual "razoavel" continua disparando (o teto
-  de `dailyLimitTokens` em `config.json` é local/arbitrario e uma sessao
-  longa facilmente passa de 1000% dele).
+- `settings.json` (em `~/.capy-usage-monitor/`, fora do repo) — unica
+  preferencia editavel pelo usuario via UI (engrenagem): `dailyAlertEnabled`
+  + `dailyAlertPercent` (0-100, **decisao explicita do usuario**: so
+  percentual, sem campo de tokens/meta separado — ja tentamos isso e foi
+  rejeitado, ver historico). `snap.dailyAlert` em `buildSnapshot()` é
+  `true` quando `dailyAlertEnabled` e `ratios.daily >= dailyAlertPercent/100`,
+  onde `ratios.daily = todayTokens / config.dailyLimitTokens`
+  (`effectiveDailyLimit()`). **Isso significa que se o uso real do dia
+  passar de `dailyLimitTokens`, QUALQUER percentual ate 100 dispara — é
+  matematicamente correto, nao um bug.** `#dailyCurrentHint` no painel
+  mostra "uso atual do dia: X%" pra deixar isso visivel. Se o uso normal
+  do usuario for consistentemente mais pesado que o padrao de
+  `dailyLimitTokens`, a correcao é subir esse valor em `config.json`
+  (nao adicionar outro campo na UI — ja foi pedido pra manter simples).
 - `preload.js` — unica ponte entre renderer e main (`contextBridge`). Se
   adicionar uma nova acao que o renderer precisa pedir ao main, exponha
   aqui, nao habilite `nodeIntegration`.
@@ -100,7 +100,12 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   scroll do `body` é funcional mas sem barra visível de propósito
   (`::-webkit-scrollbar { display: none }`) — janela pequena por decisão
   explícita do usuário, então parte do conteúdo só aparece rolando com o
-  mouse.
+  mouse. `renderer.js::tierFor(ratio)` decide a cor das 4 barras de uso
+  em 6 faixas (`l1`..`l6`, verde claro → verde escuro → amarelo → amarelo
+  forte → vermelho → vermelho máximo com glow) em vez de só warn/danger —
+  `.compact-pct` continua com seu próprio esquema simples de 3 cores
+  (verde/amarelo/vermelho), propositalmente mais simples por ser um
+  número isolado, não uma barra.
 - `config.json` — unico lugar de configuração do usuário (limites diario/
   semanal/mensal/sessao — usados so quando NAO conectado —
   `activityThresholdsMs`, thresholds de notificação, preços). Nao

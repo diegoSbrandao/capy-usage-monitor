@@ -85,6 +85,17 @@ function formatDuration(ms) {
   return h > 0 ? `${h}h${m}min` : `${m}min`;
 }
 
+// Progressao de 0 a 100% em 6 faixas (verde claro -> vermelho maximo).
+function tierFor(ratio) {
+  const pct = Math.min(1, ratio) * 100;
+  if (pct < 20) return 'l1';
+  if (pct < 40) return 'l2';
+  if (pct < 60) return 'l3';
+  if (pct < 80) return 'l4';
+  if (pct < 95) return 'l5';
+  return 'l6';
+}
+
 function renderBar(bar, used, limit, ratio, realInfo) {
   if (realInfo) {
     const pct = Math.round(realInfo.pct);
@@ -95,9 +106,7 @@ function renderBar(bar, used, limit, ratio, realInfo) {
   }
   const pct = Math.min(100, Math.round(ratio * 100));
   bar.fill.style.width = `${pct}%`;
-  bar.fill.className = 'bar-fill';
-  if (ratio >= 1) bar.fill.classList.add('danger');
-  else if (ratio >= 0.75) bar.fill.classList.add('warn');
+  bar.fill.className = `bar-fill ${tierFor(ratio)}`;
 }
 
 function setTag(el, isReal) {
@@ -296,13 +305,13 @@ settingsBtn.addEventListener('click', () => {
   if (!settingsPanel.classList.contains('hidden')) {
     window.capyApi.getSettings().then((s) => {
       dailyAlertToggle.checked = !!s.dailyAlertEnabled;
-      dailyAlertPercent.value = s.dailyAlertPercent || 100;
+      dailyAlertPercent.value = s.dailyAlertPercent == null ? 100 : s.dailyAlertPercent;
       dailyAlertPercentRow.classList.toggle('disabled', !s.dailyAlertEnabled);
     });
     const currentPct = lastSnapshot ? Math.round(lastSnapshot.ratios.daily * 100) : null;
     dailyCurrentHint.textContent = currentPct == null
       ? 'uso atual do dia: --%'
-      : `uso atual do dia: ${currentPct}% (do teto local em config.json)`;
+      : `uso atual do dia: ${currentPct}%`;
   }
 });
 
@@ -313,7 +322,7 @@ dailyAlertToggle.addEventListener('change', () => {
 settingsSaveBtn.addEventListener('click', () => {
   window.capyApi.saveSettings({
     dailyAlertEnabled: dailyAlertToggle.checked,
-    dailyAlertPercent: Number(dailyAlertPercent.value) || 100,
+    dailyAlertPercent: Number(dailyAlertPercent.value),
   });
   settingsPanel.classList.add('hidden');
 });

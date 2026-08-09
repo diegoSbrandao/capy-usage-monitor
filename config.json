@@ -1,6 +1,6 @@
 {
   "softSessionLimitTokens": 3000000,
-  "dailyLimitTokens": 8000000,
+  "dailyLimitTokens": 100000000,
   "weeklyLimitTokens": 40000000,
   "monthlyLimitTokens": 150000000,
   "activityThresholdsMs": {

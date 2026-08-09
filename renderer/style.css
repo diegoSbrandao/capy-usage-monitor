@@ -117,6 +117,11 @@ body.compact { overflow: hidden; }
   font-size: 9.5px;
   color: #8a7a5c;
   margin-top: -4px;
+  margin-bottom: 2px;
+}
+.settings-percent input:focus {
+  outline: none;
+  border-color: #d99a3f;
 }
 
 /* --- Conta: conectar via OAuth pro percentual real --- */
@@ -388,11 +393,12 @@ body.compact { overflow: hidden; }
   display: none;
   font-size: 15px;
   font-weight: 800;
-  color: #f0dfc8;
+  color: #3ee673;
+  text-shadow: 0 0 8px rgba(62, 230, 115, 0.6);
   letter-spacing: 0.02em;
 }
-.compact-pct.warn { color: #fab219; }
-.compact-pct.danger { color: #ff6a5a; }
+.compact-pct.warn { color: #fab219; text-shadow: 0 0 8px rgba(250, 178, 25, 0.6); }
+.compact-pct.danger { color: #ff5a4d; text-shadow: 0 0 10px rgba(255, 90, 77, 0.7); }
 
 /* --- Personagem: criatura pixel pessego/laranja simples (corpo + 2
    pernas + olhos), inspirada no bichinho do claude-usage-monitor mas
@@ -414,12 +420,11 @@ body.compact { overflow: hidden; }
   width: 52px;
   height: 34px;
   background: linear-gradient(155deg, #f2795c 0%, #e8674a 55%, #d1543c 100%);
-  border-radius: 2px;
+  border-radius: 12px;
   box-shadow:
     inset 3px 3px 0 rgba(255, 255, 255, 0.15),
     inset -3px -4px 0 rgba(0, 0, 0, 0.15),
     0 3px 5px rgba(0, 0, 0, 0.3);
-  image-rendering: pixelated;
 }
 
 .spark-arm {
@@ -428,6 +433,7 @@ body.compact { overflow: hidden; }
   width: 9px;
   height: 12px;
   background: #e8674a;
+  border-radius: 4px;
 }
 .spark-arm.left { left: 0; }
 .spark-arm.right { right: 0; }
@@ -438,7 +444,19 @@ body.compact { overflow: hidden; }
   width: 7px;
   height: 7px;
   background: #1c130c;
+  border-radius: 50%;
+  box-shadow: inset -1.5px -1.5px 0 rgba(0, 0, 0, 0.3);
   z-index: 1;
+}
+.spark-eye::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
 }
 .spark-eye.left { left: 21px; }
 .spark-eye.right { left: 39px; }
@@ -469,6 +487,7 @@ body.compact { overflow: hidden; }
   width: 7px;
   height: 15px;
   background: #d1543c;
+  border-radius: 0 0 4px 4px;
 }
 .spark-leg.l1 { left: 9px; }
 .spark-leg.l2 { left: 24px; }
@@ -769,11 +788,19 @@ body.compact { overflow: hidden; }
   height: 100%;
   width: 0%;
   border-radius: 4px;
-  background: linear-gradient(90deg, #d99a3f, #f0dfc8);
   transition: width 0.4s ease, background 0.4s ease;
 }
-.bar-fill.warn { background: linear-gradient(90deg, #d99a3f, #fab219); }
-.bar-fill.danger { background: linear-gradient(90deg, #ec835a, #d03b3b); }
+/* Progressao de 0 a 100%: verde claro -> verde escuro -> amarelo ->
+   amarelo forte -> vermelho -> vermelho maximo (com glow). */
+.bar-fill.l1 { background: linear-gradient(90deg, #6fd487, #8fe89a); }
+.bar-fill.l2 { background: linear-gradient(90deg, #1e9c52, #2fae5c); }
+.bar-fill.l3 { background: linear-gradient(90deg, #c9b93a, #e8d24a); }
+.bar-fill.l4 { background: linear-gradient(90deg, #e0921f, #f0a83a); }
+.bar-fill.l5 { background: linear-gradient(90deg, #d1552f, #e0583a); }
+.bar-fill.l6 {
+  background: linear-gradient(90deg, #b52e2e, #d03b3b);
+  box-shadow: 0 0 6px 1px rgba(208, 59, 59, 0.5);
+}
 
 .model-list {
   display: flex;
@@ -860,14 +887,11 @@ body.compact .scene {
   padding: 6px 0 8px;
   border-width: 3px;
 }
-body.compact .spark { margin-bottom: 4px; }
+body.compact .spark { margin-bottom: 6px; }
 body.compact .prop { display: none !important; }
-body.compact .compact-pct { display: block; }
-body.compact .spark-status {
-  font-size: 10px;
-  max-width: 106px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+body.compact .flag { display: none; }
+body.compact .spark-status { display: none; }
+body.compact .compact-pct {
+  display: block;
+  font-size: 22px;
 }
-body.compact .compact-pct { font-size: 13px; }
