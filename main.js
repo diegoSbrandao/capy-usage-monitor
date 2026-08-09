@@ -11,29 +11,51 @@ const usage = require('./usage');
 const activity = require('./activity');
 const auth = require('./auth');
 
-const CONFIG_PATH = path.join(__dirname, 'config.json');
+// Config default vem empacotado junto com o app (dentro do asar depois de
+// empacotado — so leitura, nunca escrita). A copia de verdade, que o
+// usuario pode editar, mora em DATA_DIR — se nao existir ainda (primeira
+// execucao), copiamos o default pra la. Isso e obrigatorio pra funcionar
+// depois de empacotado: a pasta onde o app fica instalado nao e gravavel.
+const DEFAULT_CONFIG_PATH = path.join(__dirname, 'config.json');
 const DATA_DIR = path.join(os.homedir(), '.capy-usage-monitor');
+const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
 const HISTORY_XLSX_PATH = path.join(DATA_DIR, 'historico-sessoes.xlsx');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
+const ATTENTION_PATH = path.join(DATA_DIR, 'attention.json');
+const ATTENTION_MAX_AGE_MS = 5 * 60 * 1000;
 
 const FULL_SIZE = { width: 320, height: 620 };
 const COMPACT_SIZE = { width: 126, height: 148 };
 const COMPACT_MARGIN = 16;
 
+const HARDCODED_FALLBACK_CONFIG = {
+  softSessionLimitTokens: 3000000,
+  dailyLimitTokens: 100000000,
+  weeklyLimitTokens: 40000000,
+  monthlyLimitTokens: 150000000,
+  activityThresholdsMs: { working: 90000, coffeeAfter: 300000, sleepAfter: 600000 },
+  pollIntervalMs: 15000,
+  notifyThresholds: [0.75, 0.9, 1.0],
+  startInTray: false,
+};
+
 function loadConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) {
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.copyFileSync(DEFAULT_CONFIG_PATH, CONFIG_PATH);
+    } catch {
+      // best-effort: se nao conseguir copiar, cai no fallback abaixo.
+    }
+  }
   try {
     return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   } catch {
-    return {
-      softSessionLimitTokens: 3000000,
-      dailyLimitTokens: 100000000,
-      weeklyLimitTokens: 40000000,
-      monthlyLimitTokens: 150000000,
-      activityThresholdsMs: { working: 90000, coffeeAfter: 300000, sleepAfter: 600000 },
-      pollIntervalMs: 15000,
-      notifyThresholds: [0.75, 0.9, 1.0],
-      startInTray: false,
-    };
+    try {
+      return JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+    } catch {
+      return HARDCODED_FALLBACK_CONFIG;
+    }
   }
 }
 
@@ -56,6 +78,27 @@ function loadSettings() {
 // seu uso normal, suba `dailyLimitTokens` em config.json.
 function effectiveDailyLimit() {
   return config.dailyLimitTokens;
+}
+
+// Sinal gravado por um hook "Notification" do Claude Code (ver
+// scripts/signal-attention.js) — o unico jeito confiavel de saber que ele
+// esta esperando aprovacao/te avisando algo agora, porque os .jsonl locais
+// so registram o que ja aconteceu, nao um estado "pendente". Fica ativo
+// ate no maximo ATTENTION_MAX_AGE_MS, ou ate uma nova mensagem assistant
+// aparecer depois do sinal (sinal de que voce ja respondeu e o Claude
+// Code seguiu em frente).
+function isAttentionActive(lastActivityMs) {
+  let signal;
+  try {
+    signal = JSON.parse(fs.readFileSync(ATTENTION_PATH, 'utf8'));
+  } catch {
+    return false;
+  }
+  if (!signal || typeof signal.ts !== 'number') return false;
+  const age = Date.now() - signal.ts;
+  if (age > ATTENTION_MAX_AGE_MS) return false;
+  if (lastActivityMs != null && lastActivityMs > signal.ts) return false;
+  return true;
 }
 
 function saveSettings(next) {
@@ -168,6 +211,7 @@ function buildSnapshot() {
   snap.dailyAlert = !!(
     settings.dailyAlertEnabled && snap.ratios.session >= settings.dailyAlertPercent / 100
   );
+  snap.attention = isAttentionActive(snap.lastActivityMs);
 
   return snap;
 }

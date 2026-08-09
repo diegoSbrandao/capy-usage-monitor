@@ -103,6 +103,23 @@ function sumTokens(map) {
   return Object.values(map).reduce((sum, v) => sum + v, 0);
 }
 
+// "Hoje" = janela real de 24h corridas (nao dia de calendario em UTC).
+function getLast24hTokens() {
+  const entries = readEntries(ONE_DAY_MS);
+  return entries.reduce((sum, e) => sum + e.tokens, 0);
+}
+
+// "Mes" = mes corrente (do dia 1 local ate agora), nao uma janela
+// rolante de 30 dias — sao coisas diferentes e o rotulo precisa bater.
+function getCurrentMonthTokens() {
+  const now = new Date();
+  const startOfMonthMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const entries = readEntries(); // historico inteiro, filtra por timestamp abaixo
+  return entries
+    .filter((e) => e.timestamp >= startOfMonthMs)
+    .reduce((sum, e) => sum + e.tokens, 0);
+}
+
 // Mediana real de tokens/dia nos ultimos 7 dias corridos (hoje + 6
 // anteriores, dias sem uso contam como 0). Retorna null se o historico
 // local ainda nao cobre 7 dias — nao inventa numero antes disso.
@@ -216,15 +233,14 @@ function getSessionHistory() {
 function getSnapshot() {
   const dailyLast30 = getThirtyDayHeatmap();
   const weeklyByModel = getWeeklyModelBreakdown();
-  const todayKey = new Date().toISOString().slice(0, 10);
   return {
     generatedAt: new Date().toISOString(),
     currentSession: getCurrentSessionUsage(),
     weeklyByModel,
     dailyLast30,
-    todayTokens: dailyLast30[todayKey] || 0,
+    todayTokens: getLast24hTokens(),
     weeklyTokens: sumTokens(weeklyByModel),
-    monthlyTokens: sumTokens(dailyLast30),
+    monthlyTokens: getCurrentMonthTokens(),
     lastActivityMs: getLastActivityMs(),
   };
 }

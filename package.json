@@ -4,13 +4,39 @@
   "description": "Spark Monitor: desktop widget that tracks Claude Code token usage, with an original spark mascot and optional OAuth login for real usage percentages.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "icons": "node scripts/generate-icon.js",
+    "dist": "electron-builder --win"
   },
   "license": "MIT",
+  "author": "Diego Sousa Brandão",
   "devDependencies": {
-    "electron": "^43.0.0"
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "exceljs": "^4.4.0"
+  },
+  "build": {
+    "appId": "com.diegosbrandao.sparkmonitor",
+    "productName": "Spark Monitor",
+    "files": [
+      "**/*",
+      "!scripts/**",
+      "!.claude/**",
+      "!*.md"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }
