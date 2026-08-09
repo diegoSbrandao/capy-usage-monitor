@@ -375,6 +375,31 @@ ipcMain.handle('settings:save', (event, next) => {
   return saved;
 });
 
+// Abrir com o Windows: estado real fica no proprio SO (registro/pasta de
+// inicializacao), lido/escrito via app.setLoginItemSettings — nao guardamos
+// isso em settings.json pra nao correr o risco de desincronizar dos dois.
+// Em dev (`electron .`) o execPath e o binario do Electron, entao precisa
+// apontar path/args pro projeto explicitamente; empacotado, o exe ja e o
+// app certo, nao precisa de nada extra.
+function getAutoStart() {
+  return app.getLoginItemSettings().openAtLogin;
+}
+function setAutoStart(enabled) {
+  if (app.isPackaged) {
+    app.setLoginItemSettings({ openAtLogin: enabled });
+  } else {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      path: process.execPath,
+      args: [path.resolve(process.argv[1] || '.')],
+    });
+  }
+  return getAutoStart();
+}
+
+ipcMain.handle('autostart:get', () => getAutoStart());
+ipcMain.handle('autostart:set', (event, enabled) => setAutoStart(!!enabled));
+
 ipcMain.on('auth-start', () => shell.openExternal(auth.begin()));
 
 ipcMain.on('auth-code', async (event, code) => {

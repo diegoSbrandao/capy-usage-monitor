@@ -81,7 +81,15 @@ extrair o HTML de verdade.
   Excel por sessao (`exportHistorySessions`, usa `exceljs`), handlers IPC
   `auth-start`/`auth-code`/`auth-logout`, `window:setCompact` (redimensiona
   e reposiciona a janela num canto — ver `FULL_SIZE`/`COMPACT_SIZE`),
-  `settings:get`/`settings:save`.
+  `settings:get`/`settings:save`, `autostart:get`/`autostart:set`
+  (`getAutoStart()`/`setAutoStart()` — toggle "Abrir com o Windows" no
+  settings, usa `app.setLoginItemSettings()` direto, **nao** guarda esse
+  estado em `settings.json` porque a fonte de verdade e o proprio SO
+  (registro do Windows) e duplicar criaria risco de desincronizar; em dev
+  precisa passar `path: process.execPath, args: [...]` explicitamente
+  porque `process.execPath` em `electron .` aponta pro binario generico
+  do Electron, nao pro projeto — sem isso o atalho de inicializacao abriria
+  o Electron vazio).
 - `settings.json` (em `~/.capy-usage-monitor/`, fora do repo) — unica
   preferencia editavel pelo usuario via UI (engrenagem): `dailyAlertEnabled`
   + `dailyAlertPercent` (0-100, **decisao explicita do usuario**: so

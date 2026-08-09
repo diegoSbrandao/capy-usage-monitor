@@ -48,6 +48,7 @@ const dailyAlertToggle = document.getElementById('dailyAlertToggle');
 const dailyAlertPercent = document.getElementById('dailyAlertPercent');
 const dailyAlertPercentRow = document.getElementById('dailyAlertPercentRow');
 const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+const autoStartToggle = document.getElementById('autoStartToggle');
 
 const clockEl = document.getElementById('clock');
 const sceneEl = document.getElementById('scene');
@@ -401,11 +402,19 @@ settingsBtn.addEventListener('click', () => {
       dailyAlertPercent.value = s.dailyAlertPercent == null ? 100 : s.dailyAlertPercent;
       dailyAlertPercentRow.classList.toggle('disabled', !s.dailyAlertEnabled);
     });
+    window.capyApi.getAutoStart().then((enabled) => {
+      autoStartToggle.checked = !!enabled;
+    });
   }
 });
 
 dailyAlertToggle.addEventListener('change', () => {
   dailyAlertPercentRow.classList.toggle('disabled', !dailyAlertToggle.checked);
+});
+
+// Estado do SO, nao de settings.json — aplica na hora, sem esperar "Salvar".
+autoStartToggle.addEventListener('change', () => {
+  window.capyApi.setAutoStart(autoStartToggle.checked);
 });
 
 settingsSaveBtn.addEventListener('click', () => {

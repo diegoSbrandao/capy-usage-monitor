@@ -38,6 +38,9 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
   status vira uma mensagem de aviso.
 - **Modo compacto**: minimize pra um widget pequeno num canto da tela,
   só com o personagem, o status e o percentual da sessão.
+- **Abrir com o Windows** (toggle no settings): liga/desliga a
+  inicialização automática direto pelo Windows, sem precisar mexer na
+  pasta de inicialização manualmente.
 - **Exportação em Excel por sessão** (`.xlsx` formatado, uma linha por
   sessão do Claude Code — não por dia).
 - **Mediana real de tokens/dia (7d)** — calculada a partir do seu próprio

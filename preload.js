@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld('capyApi', {
   setCompact: (compact) => ipcRenderer.invoke('window:setCompact', compact),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (next) => ipcRenderer.invoke('settings:save', next),
+
+  getAutoStart: () => ipcRenderer.invoke('autostart:get'),
+  setAutoStart: (enabled) => ipcRenderer.invoke('autostart:set', enabled),
 });
