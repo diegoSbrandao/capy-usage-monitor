@@ -1,0 +1,13 @@
+{
+  "name": "capy-usage-monitor",
+  "version": "0.1.0",
+  "description": "Desktop widget that tracks Claude Code token usage locally, with an original capybara pet mascot.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^43.0.0"
+  }
+}

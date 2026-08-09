@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Capy Usage Monitor</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="titlebar">
+    <span>Capy Usage Monitor</span>
+    <button id="closeBtn" title="Ocultar">&#x2715;</button>
+  </div>
+
+  <div class="capy-stage">
+    <div id="capy" class="capy idle">
+      <div class="capy-ear left"></div>
+      <div class="capy-ear right"></div>
+      <div class="capy-body">
+        <div class="capy-snout"></div>
+        <div class="capy-eye left"></div>
+        <div class="capy-eye right"></div>
+      </div>
+    </div>
+    <div id="capyStatus" class="capy-status">tranquilo</div>
+  </div>
+
+  <div class="section">
+    <div class="label-row">
+      <span>Sessao atual (5h)</span>
+      <span id="sessionTokens">-</span>
+    </div>
+    <div class="bar-track">
+      <div id="sessionBar" class="bar-fill"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label-row"><span>Por modelo (7 dias)</span></div>
+    <div id="modelBreakdown" class="model-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="label-row">
+      <span>Custo estimado (7d)</span>
+      <span id="estCost">-</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label-row"><span>Ultimos 30 dias</span></div>
+    <div id="heatmap" class="heatmap"></div>
+  </div>
+
+  <button id="exportBtn" class="export-btn">Exportar CSV</button>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
