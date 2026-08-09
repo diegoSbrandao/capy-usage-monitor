@@ -213,8 +213,9 @@ function renderCompactPct(ratio) {
   const pct = Math.round(ratio * 100);
   compactPctEl.textContent = `${pct}%`;
   compactPctEl.className = 'compact-pct';
-  if (ratio >= 1) compactPctEl.classList.add('danger');
-  else if (ratio >= 0.75) compactPctEl.classList.add('warn');
+  // Faixas: 0-40 verde, 41-79 amarelo, 80-100+ vermelho.
+  if (pct >= 80) compactPctEl.classList.add('danger');
+  else if (pct >= 41) compactPctEl.classList.add('warn');
 }
 
 function render(snapshot) {

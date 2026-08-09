@@ -391,14 +391,16 @@ body.compact { overflow: hidden; }
 
 .compact-pct {
   display: none;
+  font-family: "Courier New", monospace;
   font-size: 15px;
   font-weight: 800;
   color: #3ee673;
-  text-shadow: 0 0 8px rgba(62, 230, 115, 0.6);
-  letter-spacing: 0.02em;
+  text-shadow: 0 0 4px currentColor, 0 0 10px rgba(62, 230, 115, 0.7);
+  letter-spacing: 0.03em;
 }
-.compact-pct.warn { color: #fab219; text-shadow: 0 0 8px rgba(250, 178, 25, 0.6); }
-.compact-pct.danger { color: #ff5a4d; text-shadow: 0 0 10px rgba(255, 90, 77, 0.7); }
+/* Faixas: 0-40 verde, 41-79 amarelo, 80-100 vermelho. */
+.compact-pct.warn { color: #ffd23f; text-shadow: 0 0 4px currentColor, 0 0 10px rgba(255, 210, 63, 0.7); }
+.compact-pct.danger { color: #ff4d3d; text-shadow: 0 0 4px currentColor, 0 0 12px rgba(255, 77, 61, 0.8); }
 
 /* --- Personagem: criatura pixel pessego/laranja simples (corpo + 2
    pernas + olhos), inspirada no bichinho do claude-usage-monitor mas
@@ -892,10 +894,14 @@ body.compact .scene {
   padding: 6px 0 8px;
   border-width: 3px;
 }
-body.compact .spark { margin-bottom: 6px; }
+body.compact .spark { margin-bottom: 0; }
 body.compact .prop { display: none !important; }
 body.compact .flag { display: none; }
 body.compact .spark-status { display: none; }
+body.compact .spark-footer {
+  position: static;
+  margin-top: 8px;
+}
 body.compact .compact-pct {
   display: block;
   font-size: 22px;

@@ -104,8 +104,15 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   em 6 faixas (`l1`..`l6`, verde claro → verde escuro → amarelo → amarelo
   forte → vermelho → vermelho máximo com glow) em vez de só warn/danger —
   `.compact-pct` continua com seu próprio esquema simples de 3 cores
-  (verde/amarelo/vermelho), propositalmente mais simples por ser um
-  número isolado, não uma barra.
+  (0-40 verde, 41-79 amarelo, 80-100 vermelho — faixas exatas pedidas
+  pelo usuário, diferentes dos cortes das barras), estilo "LED" (monospace,
+  glow). **Cuidado com `.spark-footer`**: em tela cheia é
+  `position: absolute; bottom: 6px` (a `.scene` tem altura fixa, entao da
+  certo); no modo compacto a `.scene` vira `height: auto`, entao
+  `body.compact .spark-footer` precisa forcar `position: static` — sem
+  isso o rodape (numero da porcentagem) fica posicionado por cima do
+  personagem em vez de abaixo, porque o absolute-positioning nao reserva
+  espaço no fluxo normal que o `height:auto` possa medir.
 - `config.json` — unico lugar de configuração do usuário (limites diario/
   semanal/mensal/sessao — usados so quando NAO conectado —
   `activityThresholdsMs`, thresholds de notificação, preços). Nao
