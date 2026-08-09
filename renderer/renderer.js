@@ -4,6 +4,7 @@ const sparkEl = document.getElementById('spark');
 const sparkStatusEl = document.getElementById('sparkStatus');
 const statusDotEl = document.getElementById('statusDot');
 const modelBreakdownEl = document.getElementById('modelBreakdown');
+const realModelPctEl = document.getElementById('realModelPct');
 const estCostSectionEl = document.getElementById('estCostSection');
 const estCostEl = document.getElementById('estCost');
 const heatmapEl = document.getElementById('heatmap');
@@ -62,6 +63,7 @@ let lastSnapshot = null;
 
 const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 const ATTENTION_MESSAGE = 'Terminal te chamando, da uma olhada!';
+const RESET_MESSAGE = 'Prontos de novo!';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
@@ -219,6 +221,23 @@ function renderModelBreakdown(byModel) {
   }
 }
 
+// Sonnet/Opus (janela de 7 dias) sao percentuais oficiais que ja vem de
+// graca no mesmo fetchUsage() do OAuth (auth.js) mas ate agora eram
+// descartados. So mostra quando conectado e quando a API de fato manda
+// aquele campo (plano sem Opus, por exemplo, nao deve aparecer como 0%).
+function renderRealModelPct(sonnet, opus) {
+  const parts = [];
+  if (sonnet) parts.push(`Sonnet 7d: ${Math.round(sonnet.pct)}%`);
+  if (opus) parts.push(`Opus 7d: ${Math.round(opus.pct)}%`);
+  if (parts.length === 0) {
+    realModelPctEl.classList.add('hidden');
+    return;
+  }
+  realModelPctEl.textContent = parts.join(' · ');
+  realModelPctEl.title = 'Percentual oficial da API (mesma janela do painel Settings -> Usage), por modelo.';
+  realModelPctEl.classList.remove('hidden');
+}
+
 function levelFor(tokens, max) {
   if (!max || tokens === 0) return 0;
   const ratio = tokens / max;
@@ -292,7 +311,7 @@ function renderCompactPct(ratio) {
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset } = snapshot;
 
   renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
@@ -302,6 +321,7 @@ function render(snapshot) {
   updateAccountUI(real.connected);
 
   renderModelBreakdown(weeklyByModel);
+  renderRealModelPct(real.sonnet, real.opus);
   renderHeatmap(dailyLast30);
   if (sevenDayMedianTokens == null) {
     estCostSectionEl.classList.add('hidden');
@@ -310,9 +330,15 @@ function render(snapshot) {
     estCostEl.textContent = `${formatTokens(sevenDayMedianTokens)} tokens/dia`;
   }
 
-  // Janela de 5h estourada (>=90%) que caiu bem baixo de novo = renovou. Comemora.
-  if (previousSessionRatio != null && previousSessionRatio >= 0.9 && ratios.session < 0.3) {
-    addTransient('celebrating', 1600);
+  // Conectado: `justReset` vem do main (main.js::pollUsage), detectado a
+  // partir do resetMs oficial da API voltando pra cima entre um poll e
+  // outro - pega o reset de verdade, mesmo com uso baixo/medio. Sem
+  // conta conectada nao ha timestamp oficial, entao mantem a heuristica
+  // antiga como fallback (so pega reset vindo de perto do limite).
+  if (justReset) {
+    addTransient('celebrating', 3200);
+  } else if (previousSessionRatio != null && previousSessionRatio >= 0.9 && ratios.session < 0.3) {
+    addTransient('celebrating', 3200);
   }
   previousSessionRatio = ratios.session;
 
@@ -329,12 +355,16 @@ function render(snapshot) {
   sparkEl.classList.toggle('flagged', !!dailyAlert);
   sparkEl.classList.toggle('attention', !!attention);
 
-  // Prioridade: precisa de voce agora (terminal) > meta diaria > estado normal.
+  // Prioridade: precisa de voce agora (terminal) > acabou de renovar >
+  // meta diaria > estado normal. Reset so aparece durante a propria
+  // janela transiente de `.celebrating` (nao fica preso na tela).
   sparkStatusEl.textContent = attention
     ? ATTENTION_MESSAGE
-    : dailyAlert
-      ? FLAG_MESSAGE
-      : (STATUS_LABEL[activityState] || activityState);
+    : currentTransient === 'celebrating'
+      ? RESET_MESSAGE
+      : dailyAlert
+        ? FLAG_MESSAGE
+        : (STATUS_LABEL[activityState] || activityState);
   statusDotEl.style.background = attention
     ? 'oklch(0.75 0.15 85)'
     : dailyAlert

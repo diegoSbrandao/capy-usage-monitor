@@ -128,6 +128,16 @@ let realUsage = null; // { session: {pct, resetMs}, week: {...}, sonnet, opus }
 let usageTimer = null;
 let usageBackoff = 5 * 60 * 1000;
 
+// Deteccao do reset real da janela de 5h: resetMs normalmente so
+// diminui (contagem regressiva). Se o valor novo for MAIOR que o
+// anterior, a janela virou entre um poll e outro - e o proprio reset
+// acontecendo, independente do % de uso no momento (diferente da
+// heuristica antiga no renderer, que so pegava reset vindo de perto do
+// limite). Margem de 1min pra nao disparar por jitter de relogio.
+let previousResetMsSession = null;
+let justResetSession = false;
+const RESET_JITTER_MARGIN_MS = 60 * 1000;
+
 function scheduleUsagePoll() {
   clearTimeout(usageTimer);
   if (auth.isConnected()) usageTimer = setTimeout(pollUsage, usageBackoff);
@@ -136,6 +146,15 @@ function scheduleUsagePoll() {
 async function pollUsage() {
   try {
     realUsage = await auth.fetchUsage();
+    const nextReset = realUsage.session.resetMs;
+    if (
+      previousResetMsSession != null &&
+      nextReset != null &&
+      nextReset > previousResetMsSession + RESET_JITTER_MARGIN_MS
+    ) {
+      justResetSession = true;
+    }
+    previousResetMsSession = nextReset;
     usageBackoff = 5 * 60 * 1000;
     pushSnapshot();
   } catch (e) {
@@ -171,13 +190,21 @@ function buildSnapshot() {
   // painel Settings -> Usage). Hoje/Mes nao tem equivalente na API oficial
   // e continuam sendo estimativa local contra o teto configuravel.
   const connected = auth.isConnected();
-  snap.real = { connected, session: null, week: null };
+  snap.real = { connected, session: null, week: null, sonnet: null, opus: null };
   if (connected && realUsage) {
     snap.real.session = realUsage.session;
     snap.real.week = realUsage.week;
+    snap.real.sonnet = realUsage.sonnet;
+    snap.real.opus = realUsage.opus;
     snap.ratios.session = realUsage.session.pct / 100;
     snap.ratios.weekly = realUsage.week.pct / 100;
   }
+
+  // Consumido aqui (nao em pushSnapshot) pra so entregar `true` uma vez,
+  // mesmo com buildSnapshot() sendo chamado tanto pelo poll periodico
+  // quanto por ipcMain 'usage:request'.
+  snap.justReset = justResetSession;
+  justResetSession = false;
 
   // Compatibilidade com o campo antigo usado pelas notificacoes.
   snap.sessionRatio = snap.ratios.session;
@@ -284,6 +311,22 @@ function createTray() {
   });
 }
 
+// Mesma logica de abreviacao de tokens do renderer (formatTokens em
+// renderer.js), replicada aqui porque o processo main nao carrega o
+// bundle do renderer.
+function formatTokensShort(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+function formatModelBreakdown(tokensByModel) {
+  return Object.entries(tokensByModel || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([model, tokens]) => `${model}: ${formatTokensShort(tokens)}`)
+    .join(', ');
+}
+
 async function exportHistorySessions() {
   const sessions = usage.getSessionHistory();
 
@@ -302,7 +345,12 @@ async function exportHistorySessions() {
     { header: 'Fim', key: 'end', width: 18 },
     { header: 'Duracao (min)', key: 'durationMin', width: 14 },
     { header: 'Tokens', key: 'tokens', width: 14 },
+    { header: 'Tokens entrada', key: 'inputTokens', width: 14 },
+    { header: 'Tokens saida', key: 'outputTokens', width: 14 },
+    { header: 'Tokens cache (criacao)', key: 'cacheCreationTokens', width: 18 },
+    { header: 'Tokens cache (leitura)', key: 'cacheReadTokens', width: 18 },
     { header: 'Modelo principal', key: 'topModel', width: 22 },
+    { header: 'Modelos (detalhe)', key: 'modelBreakdown', width: 30 },
     { header: 'Mensagens', key: 'entryCount', width: 12 },
   ];
 
@@ -319,12 +367,21 @@ async function exportHistorySessions() {
       end: new Date(s.endMs),
       durationMin: Math.max(1, Math.round((s.endMs - s.startMs) / 60000)),
       tokens: s.totalTokens,
+      inputTokens: s.inputTokens,
+      outputTokens: s.outputTokens,
+      cacheCreationTokens: s.cacheCreationTokens,
+      cacheReadTokens: s.cacheReadTokens,
       topModel: s.topModel,
+      modelBreakdown: formatModelBreakdown(s.tokensByModel),
       entryCount: s.entryCount,
     });
     row.getCell('start').numFmt = 'dd/mm/yyyy hh:mm';
     row.getCell('end').numFmt = 'dd/mm/yyyy hh:mm';
     row.getCell('tokens').numFmt = '#,##0';
+    row.getCell('inputTokens').numFmt = '#,##0';
+    row.getCell('outputTokens').numFmt = '#,##0';
+    row.getCell('cacheCreationTokens').numFmt = '#,##0';
+    row.getCell('cacheReadTokens').numFmt = '#,##0';
   }
 
   fs.mkdirSync(path.dirname(HISTORY_XLSX_PATH), { recursive: true });

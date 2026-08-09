@@ -662,13 +662,25 @@ body.compact { overflow: hidden; }
   0% { transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1; }
   100% { transform: rotate(var(--a)) translateX(42px) scale(0.4); opacity: 0; }
 }
-.spark.celebrating .mascot-grid { animation: celebratePulse 1.5s ease-in-out; }
+.spark.celebrating .mascot-grid {
+  animation: celebratePulse 1.5s ease-in-out, celebrateJump 1.5s ease-in-out;
+}
 @keyframes celebratePulse {
   0% { transform: scale(1); filter: brightness(1); }
   20% { transform: scale(1.15); filter: brightness(1.4); }
   40% { transform: scale(0.95); filter: brightness(1.1); }
   60% { transform: scale(1.08); filter: brightness(1.25); }
   100% { transform: scale(1); filter: brightness(1); }
+}
+/* Pulinho de "acordou/renovou" somado ao pulso acima — mesma logica de
+   composicao (duas animacoes na mesma propriedade base entrariam em
+   conflito, mas scale/brightness vs translateY sao independentes). */
+@keyframes celebrateJump {
+  0% { translate: 0 0; }
+  20% { translate: 0 -6px; }
+  40% { translate: 0 1px; }
+  60% { translate: 0 -3px; }
+  100% { translate: 0 0; }
 }
 
 /* Bandeira de alerta (configuravel via engrenagem, ver settings-panel):
@@ -1025,6 +1037,12 @@ body.compact { overflow: hidden; }
 }
 .model-name { color: oklch(0.82 0.006 260); }
 .model-value { color: oklch(0.6 0.01 260); font-size: 11px; }
+.model-real-pct {
+  margin-top: 8px;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 11px;
+  color: oklch(0.6 0.01 260);
+}
 .model-bar-track {
   height: 4px;
   border-radius: 99px;

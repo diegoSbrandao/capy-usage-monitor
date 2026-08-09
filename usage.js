@@ -175,6 +175,10 @@ function parseSessionFile(file) {
   let endMs = null;
   let totalTokens = 0;
   let entryCount = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let cacheCreationTokens = 0;
+  let cacheReadTokens = 0;
   const tokensByModel = {};
 
   for (const line of raw.split('\n')) {
@@ -190,9 +194,14 @@ function parseSessionFile(file) {
     if (Number.isNaN(ts)) continue;
     if (startMs == null || ts < startMs) startMs = ts;
     if (endMs == null || ts > endMs) endMs = ts;
-    const tokens = tokensForEntry(obj.message.usage);
+    const u = obj.message.usage;
+    const tokens = tokensForEntry(u);
     totalTokens += tokens;
     entryCount += 1;
+    inputTokens += u.input_tokens || 0;
+    outputTokens += u.output_tokens || 0;
+    cacheCreationTokens += u.cache_creation_input_tokens || 0;
+    cacheReadTokens += u.cache_read_input_tokens || 0;
     const model = obj.message.model || 'unknown';
     tokensByModel[model] = (tokensByModel[model] || 0) + tokens;
   }
@@ -216,6 +225,11 @@ function parseSessionFile(file) {
     totalTokens,
     entryCount,
     topModel,
+    tokensByModel,
+    inputTokens,
+    outputTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
   };
 }
 
