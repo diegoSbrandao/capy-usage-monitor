@@ -7,7 +7,10 @@
 </head>
 <body>
   <div class="titlebar">
-    <span>Spark Monitor</span>
+    <div class="titlebar-brand">
+      <span class="brand-icon"></span>
+      <span>Spark Monitor</span>
+    </div>
     <div class="titlebar-actions">
       <button id="settingsBtn" title="Configuracoes">&#x2699;</button>
       <button id="minimizeBtn" title="Modo compacto">&#x2013;</button>
@@ -16,7 +19,7 @@
   </div>
 
   <div id="settingsPanel" class="settings-panel hidden">
-    <div class="account">
+    <div class="settings-card account">
       <div id="accountDisconnected" class="account-row">
         <span class="account-hint">numeros estimados localmente</span>
         <button id="connectBtn" class="account-btn">Conectar conta</button>
@@ -35,54 +38,141 @@
       <div id="accountError" class="account-error hidden"></div>
     </div>
 
-    <div class="settings-divider"></div>
-
-    <div class="settings-row">
-      <label for="dailyAlertToggle">Avisar ao atingir limite diario</label>
-      <input type="checkbox" id="dailyAlertToggle" />
-    </div>
-    <div class="settings-row" id="dailyAlertPercentRow">
-      <label for="dailyAlertPercent">Percentual do limite</label>
-      <div class="settings-percent">
-        <input type="number" id="dailyAlertPercent" min="0" max="100" step="5" />
-        <span>%</span>
+    <div class="settings-card">
+      <div class="settings-row">
+        <label for="dailyAlertToggle">Avisar ao atingir limite diario</label>
+        <label class="switch">
+          <input type="checkbox" id="dailyAlertToggle" />
+          <span class="switch-track"><span class="switch-knob"></span></span>
+        </label>
       </div>
     </div>
-    <div class="settings-hint" id="dailyCurrentHint">uso atual do dia: --%</div>
-    <button id="settingsSaveBtn" class="account-btn">Salvar</button>
 
-    <div class="settings-divider"></div>
-    <button id="exportBtn" class="export-btn">Exportar Excel (por sessao)</button>
+    <div class="settings-card">
+      <div class="settings-row" id="dailyAlertPercentRow">
+        <label for="dailyAlertPercent">Percentual do limite</label>
+        <div class="settings-percent">
+          <input type="number" id="dailyAlertPercent" min="0" max="100" step="5" />
+          <span>%</span>
+        </div>
+      </div>
+    </div>
+
+    <button id="settingsSaveBtn" class="btn-primary">Salvar</button>
+
+    <button id="exportBtn" class="btn-outline">Exportar Excel (por sessao)</button>
   </div>
 
   <div class="scene" id="scene">
-    <div id="clock" class="clock">--:--</div>
+    <div class="clock-chip">
+      <span class="clock-dot"></span>
+      <span id="clock">--:--</span>
+    </div>
     <div class="sun"></div>
     <div class="moon"></div>
     <div class="cloud cloud1"></div>
     <div class="cloud cloud2"></div>
-    <span class="star s1">+</span>
-    <span class="star s2">+</span>
-    <span class="star s3">+</span>
-    <span class="star s4">+</span>
-    <span class="star s5">+</span>
-    <span class="star s6">+</span>
+    <span class="star s1"></span>
+    <span class="star s2"></span>
+    <span class="star s3"></span>
+    <span class="star s4"></span>
+    <span class="star s5"></span>
+    <span class="star s6"></span>
 
     <div id="spark" class="spark idle">
-      <div class="spark-shape"></div>
-      <div class="spark-arm left"></div>
-      <div class="spark-arm right"></div>
-      <div class="spark-eye left"></div>
-      <div class="spark-eye right"></div>
+      <div class="mascot-grid">
+        <div class="mp mp-body" style="grid-row:1;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:1;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:1;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:1;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:1;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:2;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:2;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:3;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:1;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:2;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:4;grid-column:11;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:1;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:2;"></div>
+        <div class="mp mp-eye" style="grid-row:5;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:8;"></div>
+        <div class="mp mp-eye" style="grid-row:5;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:5;grid-column:11;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:1;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:2;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:6;grid-column:11;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:1;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:2;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:4;"></div>
+        <div class="mp mp-mouth" style="grid-row:7;grid-column:5;"></div>
+        <div class="mp mp-mouth" style="grid-row:7;grid-column:6;"></div>
+        <div class="mp mp-mouth" style="grid-row:7;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:7;grid-column:11;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:1;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:2;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:3;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:4;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:5;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:6;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:7;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:8;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:9;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:10;"></div>
+        <div class="mp mp-body" style="grid-row:8;grid-column:11;"></div>
+        <div class="mp mp-leg-a" style="grid-row:9;grid-column:2;"></div>
+        <div class="mp mp-leg-b" style="grid-row:9;grid-column:4;"></div>
+        <div class="mp mp-leg-b" style="grid-row:9;grid-column:8;"></div>
+        <div class="mp mp-leg-a" style="grid-row:9;grid-column:10;"></div>
+        <div class="mp mp-leg-a" style="grid-row:10;grid-column:2;"></div>
+        <div class="mp mp-leg-b" style="grid-row:10;grid-column:4;"></div>
+        <div class="mp mp-leg-b" style="grid-row:10;grid-column:8;"></div>
+        <div class="mp mp-leg-a" style="grid-row:10;grid-column:10;"></div>
+      </div>
+
       <div class="spark-glasses">
         <div class="lens"></div>
         <div class="lens"></div>
       </div>
       <div class="spark-zzz">Z z z</div>
-      <div class="spark-leg l1"></div>
-      <div class="spark-leg l2"></div>
-      <div class="spark-leg l3"></div>
-      <div class="spark-leg l4"></div>
+      <div class="attention-badge"></div>
 
       <div class="flag">
         <div class="flag-pole"></div>
@@ -128,62 +218,79 @@
 
       <div class="spark-burst">
         <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
     <div class="spark-footer">
-      <div id="sparkStatus" class="spark-status">tranquilo</div>
-      <div id="compactPct" class="compact-pct">0%</div>
+      <div class="spark-status">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="sparkStatus">tranquilo</span>
+      </div>
+      <div class="compact-pct-row">
+        <span id="compactDot" class="compact-dot"></span>
+        <span id="compactPct" class="compact-pct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <div class="metric-name">
+        <span>Sessao (5h)</span>
+        <span id="sessionBadge" class="badge"></span>
+      </div>
+      <span id="sessionSubtext" class="metric-subtext"></span>
+    </div>
+    <div class="metric-bottom">
+      <div class="bar-track"><div id="sessionBar" class="bar-fill"></div></div>
+      <span id="sessionValue" class="metric-value">-</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <div class="metric-name">
+        <span>Hoje</span>
+        <span class="badge badge-personal" title="Nao existe limite diario oficial da Anthropic. Isso e so um teto pessoal configuravel em config.json (dailyLimitTokens), pra voce acompanhar seu proprio ritmo.">teto pessoal</span>
+      </div>
+      <span id="dailySubtext" class="metric-subtext"></span>
+    </div>
+    <div class="metric-bottom">
+      <div class="bar-track"><div id="dailyBar" class="bar-fill"></div></div>
+      <span id="dailyValue" class="metric-value">-</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <div class="metric-name">
+        <span>Semana</span>
+        <span id="weeklyBadge" class="badge"></span>
+      </div>
+      <span id="weeklySubtext" class="metric-subtext"></span>
+    </div>
+    <div class="metric-bottom">
+      <div class="bar-track"><div id="weeklyBar" class="bar-fill"></div></div>
+      <span id="weeklyValue" class="metric-value">-</span>
     </div>
   </div>
 
   <div class="section">
-    <div class="label-row">
-      <span>Sessao (5h) <span id="sessionTag" class="tag"></span></span>
-      <span id="sessionTokens">-</span>
-    </div>
-    <div class="bar-track"><div id="sessionBar" class="bar-fill"></div></div>
-  </div>
-
-  <div class="section">
-    <div class="label-row">
-      <span>Hoje <span class="tag" title="Nao existe limite diario oficial da Anthropic. Isso e so um teto pessoal configuravel em config.json (dailyLimitTokens), pra voce acompanhar seu proprio ritmo.">teto pessoal</span></span>
-      <span id="dailyTokens">-</span>
-    </div>
-    <div class="bar-track"><div id="dailyBar" class="bar-fill"></div></div>
-  </div>
-
-  <div class="section">
-    <div class="label-row">
-      <span>Semana <span id="weeklyTag" class="tag"></span></span>
-      <span id="weeklyTokens">-</span>
-    </div>
-    <div class="bar-track"><div id="weeklyBar" class="bar-fill"></div></div>
-  </div>
-
-  <div class="section">
-    <div class="label-row">
-      <span>Mes <span class="tag" title="Nao existe limite mensal oficial da Anthropic. Isso e so um teto pessoal configuravel em config.json (monthlyLimitTokens), pra voce acompanhar seu proprio ritmo.">teto pessoal</span></span>
-      <span id="monthlyTokens">-</span>
-    </div>
-    <div class="bar-track"><div id="monthlyBar" class="bar-fill"></div></div>
-  </div>
-
-  <div class="section">
-    <div class="label-row"><span>Por modelo (7 dias)</span></div>
+    <div class="label-row"><span>Por modelo <span class="label-sub">(7 dias)</span></span></div>
     <div id="modelBreakdown" class="model-list"></div>
   </div>
 
-  <div class="section">
+  <div class="section hidden" id="estCostSection">
     <div class="label-row">
-      <span>Token estimado (7d) <span class="tag">mediana diaria</span></span>
-      <span id="estCost">-</span>
+      <span>Token estimado <span class="label-sub">(7d)</span></span>
+      <span id="estCost" class="metric-value">-</span>
     </div>
   </div>
 
   <div class="section">
     <div class="label-row">
       <span>Ultimos 30 dias</span>
-      <span id="heatmapTotal">-</span>
+      <span id="heatmapTotal" class="metric-value">-</span>
     </div>
     <div id="heatmap" class="heatmap"></div>
   </div>

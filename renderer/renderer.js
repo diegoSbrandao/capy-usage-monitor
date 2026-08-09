@@ -2,21 +2,34 @@
 
 const sparkEl = document.getElementById('spark');
 const sparkStatusEl = document.getElementById('sparkStatus');
+const statusDotEl = document.getElementById('statusDot');
 const modelBreakdownEl = document.getElementById('modelBreakdown');
+const estCostSectionEl = document.getElementById('estCostSection');
 const estCostEl = document.getElementById('estCost');
 const heatmapEl = document.getElementById('heatmap');
 const heatmapTotalEl = document.getElementById('heatmapTotal');
 const exportBtn = document.getElementById('exportBtn');
 const closeBtn = document.getElementById('closeBtn');
 
-const bars = {
-  session: { text: document.getElementById('sessionTokens'), fill: document.getElementById('sessionBar') },
-  daily: { text: document.getElementById('dailyTokens'), fill: document.getElementById('dailyBar') },
-  weekly: { text: document.getElementById('weeklyTokens'), fill: document.getElementById('weeklyBar') },
-  monthly: { text: document.getElementById('monthlyTokens'), fill: document.getElementById('monthlyBar') },
+const metrics = {
+  session: {
+    subtext: document.getElementById('sessionSubtext'),
+    value: document.getElementById('sessionValue'),
+    fill: document.getElementById('sessionBar'),
+    badge: document.getElementById('sessionBadge'),
+  },
+  daily: {
+    subtext: document.getElementById('dailySubtext'),
+    value: document.getElementById('dailyValue'),
+    fill: document.getElementById('dailyBar'),
+  },
+  weekly: {
+    subtext: document.getElementById('weeklySubtext'),
+    value: document.getElementById('weeklyValue'),
+    fill: document.getElementById('weeklyBar'),
+    badge: document.getElementById('weeklyBadge'),
+  },
 };
-const sessionTagEl = document.getElementById('sessionTag');
-const weeklyTagEl = document.getElementById('weeklyTag');
 
 const accountDisconnectedEl = document.getElementById('accountDisconnected');
 const accountPasteRowEl = document.getElementById('accountPasteRow');
@@ -35,11 +48,11 @@ const dailyAlertToggle = document.getElementById('dailyAlertToggle');
 const dailyAlertPercent = document.getElementById('dailyAlertPercent');
 const dailyAlertPercentRow = document.getElementById('dailyAlertPercentRow');
 const settingsSaveBtn = document.getElementById('settingsSaveBtn');
-const dailyCurrentHint = document.getElementById('dailyCurrentHint');
 
 const clockEl = document.getElementById('clock');
 const sceneEl = document.getElementById('scene');
 const compactPctEl = document.getElementById('compactPct');
+const compactDotEl = document.getElementById('compactDot');
 
 let showingPasteRow = false;
 let profileRequested = false;
@@ -47,6 +60,7 @@ let isCompact = false;
 let lastSnapshot = null;
 
 const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
+const ATTENTION_MESSAGE = 'Terminal te chamando, da uma olhada!';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
@@ -55,6 +69,15 @@ const STATUS_LABEL = {
   asleep: 'dormindo',
   hot: 'quase la...',
   alert: 'no limite!',
+};
+
+const STATUS_DOT_COLOR = {
+  working: 'oklch(0.75 0.16 150)',
+  idle: 'oklch(0.55 0.01 260)',
+  light: 'oklch(0.75 0.15 85)',
+  asleep: 'oklch(0.55 0.01 260)',
+  hot: 'oklch(0.75 0.15 55)',
+  alert: 'oklch(0.65 0.19 25)',
 };
 
 let previousSessionRatio = null;
@@ -106,22 +129,42 @@ function tierFor(ratio) {
   return 'l6';
 }
 
-function renderBar(bar, used, limit, ratio, realInfo, useDaysForReset) {
+function setBarTier(fillEl, ratio) {
+  const pct = Math.min(100, Math.round(ratio * 100));
+  fillEl.style.width = `${pct}%`;
+  fillEl.className = `bar-fill ${tierFor(ratio)}`;
+}
+
+function renderMetric(m, used, limit, ratio, realInfo, useDaysForReset) {
+  setBarTier(m.fill, ratio);
   if (realInfo) {
-    const pct = Math.round(realInfo.pct);
     const resetTxt = useDaysForReset
       ? formatDurationDays(realInfo.resetMs)
       : formatDuration(realInfo.resetMs);
-    bar.text.textContent = resetTxt ? `${pct}% (reinicia em ${resetTxt})` : `${pct}%`;
+    m.subtext.textContent = resetTxt ? `reinicia em ${resetTxt}` : '';
+    m.value.textContent = `${Math.round(realInfo.pct)}%`;
   } else {
-    bar.text.textContent = `${formatTokens(used)} / ${formatTokens(limit)}`;
+    const limitPct = limit ? Math.round((used / limit) * 100) : 0;
+    m.subtext.textContent = `${limitPct}% do teto`;
+    m.value.textContent = `${formatTokens(used)} / ${formatTokens(limit)}`;
   }
-  const pct = Math.min(100, Math.round(ratio * 100));
-  bar.fill.style.width = `${pct}%`;
-  bar.fill.className = `bar-fill ${tierFor(ratio)}`;
 }
 
-function setTag(el, isReal) {
+// Hoje/Mes: nao existe teto oficial da Anthropic pra nenhum dos dois, entao
+// nao mostramos percentual nem "usado/limite" (confunde, parece um limite
+// real) — so o total de tokens gastos na janela. A barra usa a cor de
+// marca (laranja, mesma do icone/mascote) em vez do gradiente verde->
+// vermelho — nao e mais um indicador de "quao perto do limite", entao a
+// cor de urgencia nao faz sentido aqui.
+function renderSpentOnly(m, used, ratio) {
+  const pct = Math.min(100, Math.round(ratio * 100));
+  m.fill.style.width = `${pct}%`;
+  m.fill.className = 'bar-fill accent';
+  m.subtext.textContent = '';
+  m.value.textContent = `${formatTokens(used)} tokens`;
+}
+
+function setBadge(el, isReal) {
   if (!el) return;
   el.textContent = isReal ? 'real' : 'teto pessoal';
   el.title = isReal
@@ -185,8 +228,9 @@ function levelFor(tokens, max) {
 }
 
 function periodForHour(h) {
-  if (h >= 6 && h < 17) return 'day';
-  if (h >= 17 && h < 19) return 'afternoon';
+  if (h >= 6 && h < 10) return 'morning';
+  if (h >= 10 && h < 16) return 'day';
+  if (h >= 16 && h < 19) return 'evening';
   return 'night';
 }
 
@@ -215,11 +259,13 @@ function renderHeatmap(dailyLast30) {
   for (const day of days) {
     const tokens = dailyLast30[day] || 0;
     total += tokens;
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.title = `${day}: ${formatTokens(tokens)} tokens`;
-    cell.dataset.level = String(levelFor(tokens, max));
-    heatmapEl.appendChild(cell);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.title = `${day}: ${formatTokens(tokens)} tokens`;
+    bar.dataset.level = String(levelFor(tokens, max));
+    const heightPct = tokens === 0 ? 6 : Math.max(10, Math.round((tokens / max) * 100));
+    bar.style.height = `${heightPct}%`;
+    heatmapEl.appendChild(bar);
   }
   heatmapTotalEl.textContent = `${formatTokens(total)} tokens`;
 }
@@ -228,32 +274,44 @@ function renderCompactPct(ratio) {
   const pct = Math.round(ratio * 100);
   compactPctEl.textContent = `${pct}%`;
   compactPctEl.className = 'compact-pct';
+  compactDotEl.className = 'compact-dot';
   // Faixas: 0-40 verde, 41-79 amarelo, 80-100+ vermelho.
-  if (pct >= 80) compactPctEl.classList.add('danger');
-  else if (pct >= 41) compactPctEl.classList.add('warn');
+  let glowColor = '#3ee673';
+  if (pct >= 80) {
+    compactPctEl.classList.add('danger');
+    compactDotEl.classList.add('danger');
+    glowColor = '#ff4d3d';
+  } else if (pct >= 41) {
+    compactPctEl.classList.add('warn');
+    compactDotEl.classList.add('warn');
+    glowColor = '#ffd23f';
+  }
+  sparkEl.style.setProperty('--glow-color', glowColor);
 }
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention } = snapshot;
 
-  renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
-  renderBar(bars.daily, snapshot.todayTokens, limits.daily, ratios.daily);
-  renderBar(bars.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly, real.week, true);
-  renderBar(bars.monthly, snapshot.monthlyTokens, limits.monthly, ratios.monthly);
-  setTag(sessionTagEl, !!real.session);
-  setTag(weeklyTagEl, !!real.week);
+  renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
+  renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
+  renderMetric(metrics.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly, real.week, true);
+  setBadge(metrics.session.badge, !!real.session);
+  setBadge(metrics.weekly.badge, !!real.week);
   updateAccountUI(real.connected);
 
   renderModelBreakdown(weeklyByModel);
   renderHeatmap(dailyLast30);
-  estCostEl.textContent = sevenDayMedianTokens == null
-    ? 'coletando dados (precisa de 7 dias)'
-    : `${formatTokens(sevenDayMedianTokens)} tokens/dia`;
+  if (sevenDayMedianTokens == null) {
+    estCostSectionEl.classList.add('hidden');
+  } else {
+    estCostSectionEl.classList.remove('hidden');
+    estCostEl.textContent = `${formatTokens(sevenDayMedianTokens)} tokens/dia`;
+  }
 
   // Janela de 5h estourada (>=90%) que caiu bem baixo de novo = renovou. Comemora.
   if (previousSessionRatio != null && previousSessionRatio >= 0.9 && ratios.session < 0.3) {
-    addTransient('celebrating', 1200);
+    addTransient('celebrating', 1600);
   }
   previousSessionRatio = ratios.session;
 
@@ -268,8 +326,19 @@ function render(snapshot) {
   }
   if (currentTransient) sparkEl.classList.add(currentTransient);
   sparkEl.classList.toggle('flagged', !!dailyAlert);
+  sparkEl.classList.toggle('attention', !!attention);
 
-  sparkStatusEl.textContent = dailyAlert ? FLAG_MESSAGE : (STATUS_LABEL[activityState] || activityState);
+  // Prioridade: precisa de voce agora (terminal) > meta diaria > estado normal.
+  sparkStatusEl.textContent = attention
+    ? ATTENTION_MESSAGE
+    : dailyAlert
+      ? FLAG_MESSAGE
+      : (STATUS_LABEL[activityState] || activityState);
+  statusDotEl.style.background = attention
+    ? 'oklch(0.75 0.15 85)'
+    : dailyAlert
+      ? STATUS_DOT_COLOR.alert
+      : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
   renderCompactPct(ratios.session);
 }
 
@@ -332,10 +401,6 @@ settingsBtn.addEventListener('click', () => {
       dailyAlertPercent.value = s.dailyAlertPercent == null ? 100 : s.dailyAlertPercent;
       dailyAlertPercentRow.classList.toggle('disabled', !s.dailyAlertEnabled);
     });
-    const currentPct = lastSnapshot ? Math.round(lastSnapshot.ratios.daily * 100) : null;
-    dailyCurrentHint.textContent = currentPct == null
-      ? 'uso atual do dia: --%'
-      : `uso atual do dia: ${currentPct}%`;
   }
 });
 
