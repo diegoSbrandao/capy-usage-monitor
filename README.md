@@ -14,12 +14,14 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
 - **Sessão (5h) e Semana com percentual real** — login OAuth2 opcional
   (mesmo fluxo do próprio Claude Code) que busca o percentual autoritativo
   direto da conta Anthropic, igual ao painel oficial Settings → Usage.
-- **Hoje e Mês contra um teto pessoal (não oficial)** — a Anthropic não
-  tem limite diário nem mensal (só sessão de 5h e janela de 7 dias, [ver
-  aqui](https://support.claude.com/en/articles/9797557-usage-limit-best-practices)),
-  então essas duas barras comparam seus tokens reais (somados dos seus
-  próprios logs locais) contra um número que **você** configura em
-  `config.json` — a etiqueta "teto pessoal" deixa isso explícito na tela.
+- **Hoje (últimas 24h reais)** — a Anthropic não tem limite diário (só
+  sessão de 5h e janela de 7 dias, [ver aqui](https://support.claude.com/en/articles/9797557-usage-limit-best-practices)),
+  então essa seção só mostra o total de tokens reais gastos na janela
+  (soma dos seus próprios logs locais) — sem percentual nem "usado /
+  limite", pra não parecer um teto oficial que não existe. A barra
+  ainda usa um número que **você** configura em `config.json` só pra
+  colorir (sinal visual de ritmo), com a etiqueta "teto pessoal"
+  deixando isso explícito.
 - **Cards contextuais por ferramenta**: um cartão de arquivo aparece
   enquanto você lê, um terminal enquanto roda comando, um "laptop" com
   linhas de código + planta enquanto edita — tudo troca sozinho conforme
@@ -39,8 +41,13 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
 - **Exportação em Excel por sessão** (`.xlsx` formatado, uma linha por
   sessão do Claude Code — não por dia).
 - **Mediana real de tokens/dia (7d)** — calculada a partir do seu próprio
-  histórico local; fica "coletando dados" até você acumular 7 dias de
-  uso, nunca mostra um número chutado antes disso.
+  histórico local; o card fica escondido até você acumular 7 dias de uso,
+  nunca mostra um número chutado antes disso.
+- **Aviso de "precisa de você no terminal"**: quando o Claude Code pede
+  aprovação ou avisa algo (evento `Notification`, configurado como hook
+  no seu `~/.claude/settings.json`), o personagem ganha um badge amarelo
+  e o status muda pra "Terminal te chamando, dá uma olhada!" — some
+  sozinho assim que você responde no terminal (ou depois de 5 minutos).
 - Notificações de threshold configuráveis.
 
 ## Por que o login é opcional (e não obrigatório)
@@ -58,6 +65,18 @@ npm install
 npm start
 ```
 
+## Gerando um instalador (pra distribuir pra outras máquinas)
+
+```bash
+npm run dist
+```
+
+Gera `dist/Spark Monitor Setup <versão>.exe` (instalador NSIS, ~100MB —
+inclui o Chromium/Electron embutido). O ícone vem de `assets/icon.ico`
+(gerado por `npm run icons`, veja `scripts/generate-icon.js`). Rode
+`npm run icons` de novo se mudar o desenho do mascote, antes de gerar um
+novo instalador.
+
 ## Conectando sua conta (opcional)
 
 1. Clique em **Conectar conta** no topo do widget — abre o navegador.
@@ -69,7 +88,9 @@ Clique em **Desconectar** a qualquer momento pra apagá-lo.
 
 ## Configuração
 
-Edite `config.json`:
+Edite `~/.capy-usage-monitor/config.json` (criado automaticamente na
+primeira execução, a partir do `config.json` que vem com o app — editar
+o arquivo dentro da pasta do app não tem efeito depois de instalado):
 
 ```json
 {
@@ -99,10 +120,10 @@ mão, use a UI. Esse percentual compara contra o mesmo número real de
 | Na tela | Fonte | É real? |
 |---|---|---|
 | Sessão (5h), Semana | `api.anthropic.com/api/oauth/usage` (só se conectado) | Sim — autoritativo, igual ao site |
-| Hoje, Mês (tokens) | Soma dos seus `~/.claude/projects/**/*.jsonl` | Sim — tokens reais |
-| Hoje, Mês (teto) | `config.json`, editado por você | Não é da Anthropic — é seu |
+| Hoje | Soma das últimas 24h corridas nos seus `~/.claude/projects/**/*.jsonl` | Sim — tokens reais |
+| Tamanho da barra de Hoje | `config.json`, editado por você | Não é da Anthropic — só preenche a barra, não aparece como texto (a cor é fixa, cor de marca) |
 | Por modelo (7 dias) | Mesma soma local, por `model` | Sim |
-| Token estimado (7d) | Mediana real dos últimos 7 dias locais | Sim (só aparece após 7 dias de histórico) |
+| Token estimado (7d) | Mediana real dos últimos 7 dias locais | Sim — o card só aparece depois de 7 dias de histórico, antes disso fica escondido |
 | Sessão/Semana sem login | `tokens locais / teto de config.json` | Tokens reais, teto é seu |
 
 Não existe estimativa de custo em dólares — a Anthropic não expõe preço
@@ -118,6 +139,12 @@ Claude Code já salva localmente), soma os tokens de cada entrada
 saber se você está lendo, editando ou rodando algo agora). `auth.js`
 implementa o login OAuth2 PKCE contra `api.anthropic.com/api/oauth/usage`
 só quando você conecta a conta — sem isso, zero rede é usada.
+
+O aviso de "precisa de você no terminal" usa um hook `Notification` do
+próprio Claude Code (configurado em `~/.claude/settings.json`, fora deste
+repo) que roda `scripts/signal-attention.js` — esse script só grava um
+arquivinho com a hora em `~/.capy-usage-monitor/attention.json`; o Spark
+Monitor lê esse arquivo e decide sozinho quando o aviso deve sumir.
 
 ## Licença
 
