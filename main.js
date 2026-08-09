@@ -16,7 +16,7 @@ const DATA_DIR = path.join(os.homedir(), '.capy-usage-monitor');
 const HISTORY_XLSX_PATH = path.join(DATA_DIR, 'historico-sessoes.xlsx');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 
-const FULL_SIZE = { width: 320, height: 720 };
+const FULL_SIZE = { width: 320, height: 620 };
 const COMPACT_SIZE = { width: 126, height: 148 };
 const COMPACT_MARGIN = 16;
 

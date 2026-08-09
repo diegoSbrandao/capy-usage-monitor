@@ -5,6 +5,7 @@ const sparkStatusEl = document.getElementById('sparkStatus');
 const modelBreakdownEl = document.getElementById('modelBreakdown');
 const estCostEl = document.getElementById('estCost');
 const heatmapEl = document.getElementById('heatmap');
+const heatmapTotalEl = document.getElementById('heatmapTotal');
 const exportBtn = document.getElementById('exportBtn');
 const closeBtn = document.getElementById('closeBtn');
 
@@ -34,6 +35,7 @@ const dailyAlertToggle = document.getElementById('dailyAlertToggle');
 const dailyAlertPercent = document.getElementById('dailyAlertPercent');
 const dailyAlertPercentRow = document.getElementById('dailyAlertPercentRow');
 const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+const dailyCurrentHint = document.getElementById('dailyCurrentHint');
 
 const clockEl = document.getElementById('clock');
 const sceneEl = document.getElementById('scene');
@@ -42,6 +44,7 @@ const compactPctEl = document.getElementById('compactPct');
 let showingPasteRow = false;
 let profileRequested = false;
 let isCompact = false;
+let lastSnapshot = null;
 
 const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 
@@ -129,13 +132,21 @@ function renderModelBreakdown(byModel) {
   modelBreakdownEl.innerHTML = '';
   const entries = Object.entries(byModel).sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) {
-    modelBreakdownEl.innerHTML = '<div class="model-row"><span>sem dados</span></div>';
+    modelBreakdownEl.innerHTML = '<div class="model-row-top"><span>sem dados</span></div>';
     return;
   }
+  const max = Math.max(1, ...entries.map(([, tokens]) => tokens));
   for (const [model, tokens] of entries) {
     const row = document.createElement('div');
     row.className = 'model-row';
-    row.innerHTML = `<span>${model}</span><span>${formatTokens(tokens)}</span>`;
+    const pct = Math.max(2, Math.round((tokens / max) * 100));
+    row.innerHTML = `
+      <div class="model-row-top">
+        <span class="model-name">${model}</span>
+        <span class="model-value">${formatTokens(tokens)}</span>
+      </div>
+      <div class="model-bar-track"><div class="model-bar-fill" style="width:${pct}%"></div></div>
+    `;
     modelBreakdownEl.appendChild(row);
   }
 }
@@ -176,14 +187,17 @@ function renderHeatmap(dailyLast30) {
     days.push(d.toISOString().slice(0, 10));
   }
   const max = Math.max(1, ...Object.values(dailyLast30));
+  let total = 0;
   for (const day of days) {
     const tokens = dailyLast30[day] || 0;
+    total += tokens;
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.title = `${day}: ${formatTokens(tokens)} tokens`;
     cell.dataset.level = String(levelFor(tokens, max));
     heatmapEl.appendChild(cell);
   }
+  heatmapTotalEl.textContent = `${formatTokens(total)} tokens`;
 }
 
 function renderCompactPct(ratio) {
@@ -195,6 +209,7 @@ function renderCompactPct(ratio) {
 }
 
 function render(snapshot) {
+  lastSnapshot = snapshot;
   const { currentSession, weeklyByModel, dailyLast30, limits, ratios, estimatedWeeklyCostUsd, activityState, toolCategory, real, dailyAlert } = snapshot;
 
   renderBar(bars.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
@@ -284,6 +299,10 @@ settingsBtn.addEventListener('click', () => {
       dailyAlertPercent.value = s.dailyAlertPercent || 100;
       dailyAlertPercentRow.classList.toggle('disabled', !s.dailyAlertEnabled);
     });
+    const currentPct = lastSnapshot ? Math.round(lastSnapshot.ratios.daily * 100) : null;
+    dailyCurrentHint.textContent = currentPct == null
+      ? 'uso atual do dia: --%'
+      : `uso atual do dia: ${currentPct}% (do teto local em config.json)`;
   }
 });
 

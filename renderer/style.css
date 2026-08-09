@@ -14,10 +14,9 @@ body {
   overflow-x: hidden;
 }
 
-body::-webkit-scrollbar { width: 6px; }
-body::-webkit-scrollbar-track { background: transparent; }
-body::-webkit-scrollbar-thumb { background: #3a2f21; border-radius: 3px; }
-body::-webkit-scrollbar-thumb:hover { background: #4a3c28; }
+/* Scroll funcional (roda do mouse) mas sem barra visivel — janela fixa
+   e pequena de proposito, uma trilha lateral ficaria feia aqui. */
+body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 body.compact { overflow: hidden; }
 
@@ -114,11 +113,16 @@ body.compact { overflow: hidden; }
   font-size: 11px;
 }
 #dailyAlertPercentRow.disabled { opacity: 0.4; pointer-events: none; }
+.settings-hint {
+  font-size: 9.5px;
+  color: #8a7a5c;
+  margin-top: -4px;
+}
 
 /* --- Conta: conectar via OAuth pro percentual real --- */
 .account {
-  margin: 10px 14px 0;
-  padding: 10px 12px;
+  margin: 8px 14px 0;
+  padding: 8px 12px;
   background: linear-gradient(160deg, #3a2f21, #2a2117);
   border: 1px solid #4a3c28;
   border-radius: 8px;
@@ -238,7 +242,7 @@ body.compact { overflow: hidden; }
    codigo 100% originais, nao copiado de nenhum frame --- */
 .scene {
   position: relative;
-  height: 170px;
+  height: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -270,12 +274,14 @@ body.compact { overflow: hidden; }
   left: 8px;
   font-family: "Courier New", monospace;
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 1px;
-  color: #f1e9dd;
-  background: rgba(12, 10, 8, 0.55);
-  padding: 3px 6px;
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  color: #f5efe2;
+  text-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.45);
+  background: rgba(12, 10, 8, 0.5);
+  padding: 3px 7px;
   border-radius: 3px;
+  border: 1px solid rgba(241, 233, 221, 0.15);
   z-index: 2;
 }
 .scene[data-period="day"] .clock,
@@ -304,13 +310,17 @@ body.compact { overflow: hidden; }
 
 .moon {
   position: absolute;
-  top: 18px;
-  right: 26px;
-  width: 18px;
-  height: 18px;
+  top: 16px;
+  right: 24px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #e8e2d6;
-  box-shadow: inset 5px -2px 0 0 #0c0a08, 0 0 10px 2px rgba(232, 226, 214, 0.35);
+  background:
+    radial-gradient(circle at 28% 24%, rgba(140, 134, 118, 0.55) 0 3px, transparent 3.2px),
+    radial-gradient(circle at 62% 52%, rgba(140, 134, 118, 0.45) 0 2.4px, transparent 2.6px),
+    radial-gradient(circle at 40% 68%, rgba(140, 134, 118, 0.4) 0 2px, transparent 2.2px),
+    radial-gradient(circle at 32% 28%, #f7f3e9 0%, #ddd7c8 55%, #b9b2a0 100%);
+  box-shadow: 0 0 14px 3px rgba(232, 226, 214, 0.4);
   display: none;
 }
 .scene[data-period="night"] .moon { display: block; }
@@ -389,8 +399,8 @@ body.compact { overflow: hidden; }
    desenhada do zero em CSS, sem tracar nenhum frame dos gifs --- */
 .spark {
   position: relative;
-  width: 56px;
-  height: 64px;
+  width: 68px;
+  height: 58px;
   margin-bottom: 10px;
   transition: transform 0.3s ease;
   cursor: pointer;
@@ -399,36 +409,46 @@ body.compact { overflow: hidden; }
 .spark-shape {
   position: absolute;
   left: 50%;
-  top: 0;
+  top: 4px;
   transform: translateX(-50%);
-  width: 48px;
-  height: 42px;
-  background: linear-gradient(155deg, #eda679 0%, #dd8c5e 55%, #c9743f 100%);
-  border-radius: 3px;
+  width: 52px;
+  height: 34px;
+  background: linear-gradient(155deg, #f2795c 0%, #e8674a 55%, #d1543c 100%);
+  border-radius: 2px;
   box-shadow:
-    inset 3px 3px 0 rgba(255, 255, 255, 0.12),
+    inset 3px 3px 0 rgba(255, 255, 255, 0.15),
     inset -3px -4px 0 rgba(0, 0, 0, 0.15),
     0 3px 5px rgba(0, 0, 0, 0.3);
   image-rendering: pixelated;
 }
 
+.spark-arm {
+  position: absolute;
+  top: 14px;
+  width: 9px;
+  height: 12px;
+  background: #e8674a;
+}
+.spark-arm.left { left: 0; }
+.spark-arm.right { right: 0; }
+
 .spark-eye {
   position: absolute;
-  top: 18px;
-  width: 6px;
-  height: 6px;
-  background: #241a12;
+  top: 14px;
+  width: 7px;
+  height: 7px;
+  background: #1c130c;
   z-index: 1;
 }
-.spark-eye.left { left: 14px; }
-.spark-eye.right { left: 30px; }
+.spark-eye.left { left: 21px; }
+.spark-eye.right { left: 39px; }
 
 .spark-glasses {
   position: absolute;
   left: 50%;
-  top: 15px;
+  top: 12px;
   transform: translateX(-50%);
-  width: 34px;
+  width: 36px;
   height: 12px;
   display: none;
   gap: 4px;
@@ -438,20 +458,22 @@ body.compact { overflow: hidden; }
 .spark.working[data-tool="read"] .spark-eye { display: none; }
 .spark-glasses .lens {
   flex: 1;
-  border: 2px solid #241a12;
+  border: 2px solid #1c130c;
   border-radius: 50%;
-  background: rgba(36, 26, 18, 0.15);
+  background: rgba(28, 19, 12, 0.15);
 }
 
 .spark-leg {
   position: absolute;
   bottom: 0;
-  width: 12px;
-  height: 14px;
-  background: #c97a49;
+  width: 7px;
+  height: 15px;
+  background: #d1543c;
 }
-.spark-leg.left { left: 8px; }
-.spark-leg.right { right: 8px; }
+.spark-leg.l1 { left: 9px; }
+.spark-leg.l2 { left: 24px; }
+.spark-leg.l3 { left: 37px; }
+.spark-leg.l4 { left: 52px; }
 
 /* Estados (batem com activityState do main.js: working | idle | light | asleep | hot | alert) */
 .spark.working { animation: bob 0.5s ease-in-out infinite; }
@@ -717,8 +739,8 @@ body.compact { overflow: hidden; }
 }
 
 .section {
-  margin: 8px 14px 0;
-  padding: 10px 12px;
+  margin: 6px 14px 0;
+  padding: 7px 12px;
   background: #1a150f;
   border: 1px solid #2c2318;
   border-radius: 8px;
@@ -756,33 +778,49 @@ body.compact { overflow: hidden; }
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 11px;
+  gap: 9px;
 }
-.model-list .model-row {
+.model-row-top {
   display: flex;
   justify-content: space-between;
-  color: #cfc6b8;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+.model-name { font-weight: 600; color: #e3d8c4; }
+.model-value { color: #a89a82; }
+.model-bar-track {
+  height: 6px;
+  background: #0f0c08;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.model-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #d97757, #f0dfc8);
+  transition: width 0.4s ease;
 }
 
+/* Faixa unica (30 pilulas), cores de calor conforme a fracao do dia mais
+   cheio — inspirado no overview.gif do claude-usage-monitor. */
 .heatmap {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 3px;
+  grid-template-columns: repeat(30, 1fr);
+  gap: 2px;
 }
 .heatmap .cell {
   width: 100%;
-  padding-top: 100%;
-  position: relative;
+  height: 16px;
   border-radius: 2px;
-  background: #0f0c08;
+  background: #241f16;
   transition: transform 0.1s ease;
 }
-.heatmap .cell:hover { transform: scale(1.15); }
-.heatmap .cell[data-level="1"] { background: #5a3a1c; }
-.heatmap .cell[data-level="2"] { background: #a05a1e; }
-.heatmap .cell[data-level="3"] { background: #d97757; }
-.heatmap .cell[data-level="4"] { background: #f5c26b; }
+.heatmap .cell:hover { transform: scaleY(1.2); }
+.heatmap .cell[data-level="1"] { background: #1baf7a; opacity: 0.55; }
+.heatmap .cell[data-level="2"] { background: #1baf7a; }
+.heatmap .cell[data-level="3"] { background: #fab219; }
+.heatmap .cell[data-level="4"] { background: #d03b3b; }
 
 .export-btn {
   margin: 10px 14px 16px;
@@ -825,4 +863,11 @@ body.compact .scene {
 body.compact .spark { margin-bottom: 4px; }
 body.compact .prop { display: none !important; }
 body.compact .compact-pct { display: block; }
-body.compact .spark-status { font-size: 10px; }
+body.compact .spark-status {
+  font-size: 10px;
+  max-width: 106px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.compact .compact-pct { font-size: 13px; }
