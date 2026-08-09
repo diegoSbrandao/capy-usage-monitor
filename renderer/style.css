@@ -94,8 +94,9 @@ body {
   opacity: 0.9;
 }
 
-/* --- Cenario: nebulosa/espaco, tudo gradiente CSS (inspirado, nao copiado
-   de nenhuma foto/stock) --- */
+/* --- Cenario: pixel-art escuro inspirado nos gifs do claude-usage-monitor
+   (nuvens pixeladas + estrelas "+" + moldura pontilhada), desenho e
+   codigo 100% originais, nao copiado de nenhum frame --- */
 .scene {
   position: relative;
   height: 170px;
@@ -104,41 +105,49 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background:
-    radial-gradient(1px 1px at 8% 22%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 82% 14%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 62% 78%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 28% 85%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 92% 62%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 44% 12%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 12% 58%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 70% 40%, #fff, transparent 60%),
-    radial-gradient(1px 1px at 55% 55%, #fff, transparent 60%),
-    radial-gradient(ellipse at 15% 105%, rgba(150, 70, 220, 0.45), transparent 60%),
-    radial-gradient(ellipse at 88% 100%, rgba(50, 100, 220, 0.4), transparent 60%),
-    radial-gradient(circle at 55% 25%, rgba(100, 50, 170, 0.5), transparent 55%),
-    linear-gradient(180deg, #05030c 0%, #0c0820 55%, #150c26 100%);
+  background: #0c0a08;
+  border: 5px dotted #3a2f21;
+  border-left: none;
+  border-right: none;
 }
 
-.planet {
+.cloud {
   position: absolute;
-  top: 16px;
-  right: 24px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #b48af0 0%, #5a2fae 55%, #2c1660 100%);
-  box-shadow: 0 0 16px 3px rgba(154, 111, 224, 0.55);
+  width: 34px;
+  height: 12px;
+  background: #4a4a4a;
+  box-shadow:
+    6px -6px 0 0 #4a4a4a,
+    -6px 0 0 0 #4a4a4a,
+    12px 0 0 0 #4a4a4a;
+  opacity: 0.8;
+  animation: drift 18s linear infinite;
 }
-.planet-ring {
+.cloud1 { top: 18px; left: 10%; animation-duration: 22s; }
+.cloud2 { top: 52px; right: 14%; opacity: 0.6; transform: scale(0.8); animation-duration: 28s; animation-delay: -6s; }
+@keyframes drift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(14px); }
+  100% { transform: translateX(0); }
+}
+
+.star {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 66px;
-  height: 14px;
-  border: 2px solid rgba(224, 210, 255, 0.55);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) rotate(-18deg);
+  color: #f1e9dd;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.7;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+.star.s1 { top: 14%; left: 20%; animation-delay: 0s; }
+.star.s2 { top: 10%; left: 68%; animation-delay: 0.4s; }
+.star.s3 { top: 30%; left: 85%; animation-delay: 0.8s; }
+.star.s4 { top: 60%; left: 90%; animation-delay: 1.2s; }
+.star.s5 { top: 22%; left: 45%; animation-delay: 1.6s; }
+.star.s6 { top: 70%; left: 8%; animation-delay: 2s; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.85; }
 }
 
 .spark-status {
@@ -149,13 +158,14 @@ body {
   text-transform: lowercase;
 }
 
-/* --- Personagem: boneco blocado laranja com oculos pixelados (estilo
-   meme da comunidade Claude Code, desenho 100% original em CSS) --- */
+/* --- Personagem: criatura pixel pessego/laranja simples (corpo + 2
+   pernas + olhos), inspirada no bichinho do claude-usage-monitor mas
+   desenhada do zero em CSS, sem tracar nenhum frame dos gifs --- */
 .spark {
   position: relative;
-  width: 62px;
-  height: 78px;
-  margin-bottom: 6px;
+  width: 56px;
+  height: 64px;
+  margin-bottom: 10px;
   transition: transform 0.3s ease;
   cursor: pointer;
 }
@@ -163,57 +173,55 @@ body {
 .spark-shape {
   position: absolute;
   left: 50%;
-  top: 4px;
+  top: 0;
   transform: translateX(-50%);
-  width: 44px;
-  height: 40px;
-  background: linear-gradient(160deg, #f0934f 0%, #d9701f 100%);
-  border-radius: 7px;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  width: 48px;
+  height: 42px;
+  background: #dd8c5e;
+  border-radius: 3px;
+  image-rendering: pixelated;
 }
+
+.spark-eye {
+  position: absolute;
+  top: 18px;
+  width: 6px;
+  height: 6px;
+  background: #241a12;
+  z-index: 1;
+}
+.spark-eye.left { left: 14px; }
+.spark-eye.right { left: 30px; }
 
 .spark-glasses {
   position: absolute;
   left: 50%;
-  top: 17px;
+  top: 15px;
   transform: translateX(-50%);
-  width: 32px;
-  height: 11px;
-  background: #17140f;
-  border-radius: 3px;
-  display: flex;
-  gap: 3px;
-  padding: 2px;
+  width: 34px;
+  height: 12px;
+  display: none;
+  gap: 4px;
   z-index: 1;
 }
+.spark.working[data-tool="read"] .spark-glasses { display: flex; }
+.spark.working[data-tool="read"] .spark-eye { display: none; }
 .spark-glasses .lens {
   flex: 1;
-  border-radius: 2px;
-  background:
-    repeating-conic-gradient(#f1e9dd 0% 25%, #17140f 0% 50%) 0 0 / 5px 5px;
+  border: 2px solid #241a12;
+  border-radius: 50%;
+  background: rgba(36, 26, 18, 0.15);
 }
-
-.spark-arm {
-  position: absolute;
-  top: 10px;
-  width: 9px;
-  height: 24px;
-  background: #d9701f;
-  border-radius: 3px;
-}
-.spark-arm.left { left: -2px; }
-.spark-arm.right { right: -2px; }
 
 .spark-leg {
   position: absolute;
-  bottom: 6px;
-  width: 10px;
-  height: 18px;
-  background: #c4650f;
-  border-radius: 2px;
+  bottom: 0;
+  width: 12px;
+  height: 14px;
+  background: #c97a49;
 }
-.spark-leg.left { left: 15px; }
-.spark-leg.right { right: 15px; }
+.spark-leg.left { left: 8px; }
+.spark-leg.right { right: 8px; }
 
 /* Estados (batem com activityState do main.js: working | light | idle | hot | alert) */
 .spark.working { animation: bob 0.5s ease-in-out infinite; }
@@ -228,19 +236,19 @@ body {
   50% { transform: rotate(2deg); }
 }
 
-.spark.idle { animation: breathe 3.6s ease-in-out infinite; opacity: 0.7; }
+.spark.idle { animation: breathe 3.6s ease-in-out infinite; }
 @keyframes breathe {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
 }
 
 .spark.hot .spark-shape {
-  background: linear-gradient(160deg, #f5d9a8 0%, #d97757 60%, #e05b2e 100%);
-  filter: drop-shadow(0 0 10px rgba(224, 91, 46, 0.65));
+  background: #e0743a;
+  filter: drop-shadow(0 0 8px rgba(224, 91, 46, 0.6));
 }
 .spark.hot { animation: bob 0.35s ease-in-out infinite; }
 
-.spark.alert .spark-shape { background: linear-gradient(160deg, #f0c8a0 0%, #b5502c 80%); }
+.spark.alert .spark-shape { background: #c14a26; }
 .spark.alert { animation: shake 0.3s ease-in-out infinite; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -289,89 +297,21 @@ body {
   100% { transform: rotate(var(--a)) translateX(38px) scale(0.4); opacity: 0; }
 }
 
-/* --- Props: ferramenta (working), xicara (light), cama (idle) --- */
+/* --- Props: xicara (light), cards contextuais por ferramenta (working) ---
+   idle nao tem prop nenhum: personagem so fica parado, igual ao gif de
+   referencia (sem cama/sono). */
 .prop { position: absolute; display: none; }
-.spark.working .prop.tool { display: block; }
 .spark.light .prop.mug { display: block; }
-.spark.idle .prop.bed { display: block; }
-
-.prop.tool {
-  right: -14px;
-  top: 40%;
-  transform-origin: bottom center;
-  animation: hammer 0.5s ease-in-out infinite;
-}
-@keyframes hammer {
-  0%, 100% { transform: rotate(-20deg); }
-  50% { transform: rotate(10deg); }
-}
-
-/* Icone por categoria: so o correspondente a data-tool do #spark aparece */
-.icon-read, .icon-edit, .icon-run { display: none; }
-.spark[data-tool="read"] .icon-read { display: block; }
-.spark[data-tool="edit"] .icon-edit { display: block; }
-.spark[data-tool="run"] .icon-run,
-.spark[data-tool="other"] .icon-run { display: block; }
-
-/* read: lupa */
-.icon-read .lens {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #9aa0a6;
-  border-radius: 50%;
-}
-.icon-read .lens-handle {
-  width: 2px;
-  height: 7px;
-  background: #9aa0a6;
-  margin-left: 9px;
-  margin-top: -2px;
-  transform: rotate(45deg);
-  transform-origin: top;
-}
-
-/* edit: lapis */
-.icon-edit .pencil-body {
-  width: 5px;
-  height: 18px;
-  background: #d99a3f;
-  border-radius: 1px;
-  margin: 0 auto;
-}
-.icon-edit .pencil-tip {
-  width: 0;
-  height: 0;
-  border-left: 2.5px solid transparent;
-  border-right: 2.5px solid transparent;
-  border-top: 5px solid #6d4b2a;
-  margin: 0 auto;
-}
-
-/* run: engrenagem simplificada */
-.icon-run .gear {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #9aa0a6;
-  box-shadow:
-    0 -8px 0 -5px #9aa0a6, 0 8px 0 -5px #9aa0a6,
-    -8px 0 0 -5px #9aa0a6, 8px 0 0 -5px #9aa0a6;
-  animation: spin 1.2s linear infinite;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
 
 .prop.mug {
-  right: -10px;
-  bottom: 6px;
+  right: -16px;
+  bottom: 2px;
 }
 .mug-cup {
   width: 14px;
   height: 12px;
   background: #e8e2d6;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 3px 3px;
 }
 .mug-handle {
   position: absolute;
@@ -387,7 +327,7 @@ body {
   position: absolute;
   width: 2px;
   height: 8px;
-  background: rgba(241,233,221,0.6);
+  background: rgba(241, 233, 221, 0.6);
   border-radius: 2px;
   top: -8px;
   animation: rise 1.4s ease-in-out infinite;
@@ -399,39 +339,96 @@ body {
   100% { transform: translateY(-10px) scaleY(1.4); opacity: 0; }
 }
 
-.prop.bed {
-  left: 50%;
-  top: 30%;
-  transform: translateX(-50%);
-}
-.bed-frame {
-  width: 90px;
-  height: 34px;
-  background: #3a2f21;
-  border-radius: 6px;
-}
-.bed-pillow {
-  position: absolute;
-  left: 4px;
-  top: 4px;
-  width: 22px;
-  height: 14px;
-  background: #f1e9dd;
+/* Cards contextuais: so o card da categoria detectada aparece, ao lado
+   do personagem, enquanto activityState === working. Inspirados nos
+   gifs reading/running/editing do claude-usage-monitor, desenhados do
+   zero (nenhum texto/arte copiado dos frames originais). */
+.card {
+  left: 100%;
+  top: -6px;
+  margin-left: 8px;
+  width: 108px;
+  padding: 6px 7px;
+  background: #17140f;
+  border: 1px solid #3a2f21;
   border-radius: 4px;
+  font-size: 8px;
+  line-height: 1.5;
 }
-.zzz {
-  position: absolute;
-  right: -6px;
-  top: -18px;
-  font-size: 11px;
+.spark.working[data-tool="read"] .card-read { display: block; }
+.spark.working[data-tool="edit"] .card-edit { display: block; }
+.spark.working[data-tool="run"] .card-run,
+.spark.working[data-tool="other"] .card-run { display: block; }
+
+.card-title {
+  color: #c4a877;
   font-weight: 700;
-  color: #f0dfc8;
-  animation: floatUp 2.2s ease-in-out infinite;
+  margin-bottom: 4px;
 }
-@keyframes floatUp {
-  0% { transform: translateY(0); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: translateY(-14px); opacity: 0; }
+.card-line {
+  height: 4px;
+  border-radius: 1px;
+  background: #3a2f21;
+  margin-bottom: 3px;
+}
+.card-line.title { background: #d99a3f; width: 70%; }
+.card-line.short { width: 50%; }
+
+.card-dots { display: flex; gap: 3px; margin-bottom: 5px; }
+.card-dots span { width: 5px; height: 5px; border-radius: 50%; }
+.card-dots span:nth-child(1) { background: #e05b2e; }
+.card-dots span:nth-child(2) { background: #d99a3f; }
+.card-dots span:nth-child(3) { background: #7bb87a; }
+.card-line.term {
+  background: none;
+  height: auto;
+  color: #cfc6b8;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.card-line.term.ok { color: #7bb87a; }
+.card-line.term .blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.spinner {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  border: 1px solid #cfc6b8;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.card-line.code { width: 80%; }
+.card-line.code.green { background: #7bb87a; }
+.card-line.code.blue { background: #6f9adf; }
+.card-line.code.yellow { background: #d99a3f; }
+.card-edit .plant {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+}
+.plant-leaf {
+  position: absolute;
+  width: 8px;
+  height: 5px;
+  background: #6a9c5f;
+  border-radius: 50% 50% 50% 0;
+}
+.plant-leaf.l1 { bottom: 4px; left: -3px; transform: rotate(-20deg); }
+.plant-leaf.l2 { bottom: 4px; left: 1px; transform: rotate(15deg) scaleX(-1); }
+.plant-pot {
+  width: 10px;
+  height: 6px;
+  background: #a9693f;
+  border-radius: 0 0 2px 2px;
 }
 
 .section {

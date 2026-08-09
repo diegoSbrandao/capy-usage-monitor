@@ -6,12 +6,14 @@ description: Use ao trabalhar no projeto capy-usage-monitor (adicionar features,
 # Spark Monitor — guia de manutenção
 
 Widget Electron que le os transcripts locais do Claude Code
-(`~/.claude/projects/**/*.jsonl`) e mostra consumo de tokens com um
-mascote blocado laranja com oculos pixelados (estilo meme da comunidade
-Claude Code, desenho 100% original — nao traca nenhuma foto/logo), num
-cenario de nebulosa tambem em CSS puro. Login OAuth2 é **opcional**: sem
-ele, tudo funciona só com dados locais; com ele, Sessao/Semana passam a
-mostrar o percentual real da conta (veja README.md).
+(`~/.claude/projects/**/*.jsonl`) e mostra consumo de tokens com uma
+criatura pixel pessego simples (corpo + 2 pernas + olhos), num cenario
+escuro com nuvens pixeladas e estrelas "+" — visual **inspirado nos gifs
+de demonstracao do claude-usage-monitor**
+(`docs/media/{overview,idle,reading,running,editing}.gif`), mas
+redesenhado do zero em CSS (nenhum frame/asset copiado). Login OAuth2 é
+**opcional**: sem ele, tudo funciona só com dados locais; com ele,
+Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
 
 ## Onde fica cada coisa
 
@@ -48,11 +50,15 @@ mostrar o percentual real da conta (veja README.md).
   adicionar uma nova acao que o renderer precisa pedir ao main, exponha
   aqui, nao habilite `nodeIntegration`.
 - `renderer/` — UI. `style.css` tem os estados do personagem (`.working`,
-  `.light`, `.idle`, `.hot`, `.alert` — mesmos nomes de `activityState`),
-  os `.prop` que aparecem/somem por estado (`.tool` com 3 icones
-  selecionados via `[data-tool]`, `.mug`, `.bed`), duas classes efemeras
-  controladas só no renderer (`.poked`, `.celebrating`), e a secao
-  `.account` (conectar/colar codigo/desconectar). `renderer.js::render()`
+  `.light`, `.idle`, `.hot`, `.alert` — mesmos nomes de `activityState`).
+  `idle` **nao tem prop nenhum** (so o personagem parado, igual ao
+  `idle.gif` de referencia — sem cama/sono). Em `working`, um `.card`
+  contextual aparece do lado do personagem conforme `[data-tool]`:
+  `.card-read` (arquivo com linhas tipo markdown), `.card-run` (terminal
+  com 3 pontinhos + status), `.card-edit` (linhas de "codigo" coloridas +
+  planta). `.mug` aparece só em `light` (pausa curta). Duas classes
+  efemeras controladas só no renderer (`.poked`, `.celebrating`), e a
+  secao `.account` (conectar/colar codigo/desconectar). `renderer.js::render()`
   troca `className` do `#spark`, seta `dataset.tool`, atualiza as tags
   "real"/"estimado" das barras de Sessao/Semana conforme `snapshot.real`,
   e chama `updateAccountUI(snapshot.real.connected)` — nao ha logica de
@@ -65,17 +71,19 @@ mostrar o percentual real da conta (veja README.md).
   mascote, versao pixel) sem dependencia externa (PNG feito na mao com
   zlib). Rode de novo se mudar o desenho do icone do tray.
 
-## Por que o mascote é um boneco original e nao uma foto/logo
+## Por que o mascote é um desenho original e nao uma imagem real
 
-Duas decisoes explicitas do usuario, mesma logica nos dois casos: nao
+Varias decisoes explicitas do usuario, sempre a mesma logica: nao
 redistribuir imagem de terceiros (foto de fã-arte, foto de banco de
-imagem, logo oficial da Anthropic) — só recriar o *estilo* em CSS/forma
-geometrica original. O boneco laranja com oculos pixelados é inspirado no
-meme "You're Absolutely Right" da comunidade Claude Code, mas desenhado do
-zero (`.spark-shape`, `.spark-glasses`, `.spark-arm`, `.spark-leg`). O
-cenario de nebulosa (`.scene`, `.planet`) é inspirado em arte espacial
-generica, tambem 100% gradientes CSS. Nao trocar por asset/imagem real
-sem essa decisao ser revisitada explicitamente com o usuario.
+imagem, gif de outro projeto, logo oficial da Anthropic) — só recriar o
+*estilo* em CSS/forma geometrica original. A versao atual (`.spark-shape`,
+`.spark-eye`, `.spark-glasses`, `.spark-leg`, `.cloud`, `.star`) foi
+desenhada olhando pra `docs/media/*.gif` do claude-usage-monitor
+(baixados e analisados com o Read tool nesta sessao) — mesma pose geral
+(corpo+pernas simples, olhos de ponto, oculos redondos ao ler, nuvens
+pixeladas, estrelas "+", cards contextuais por ferramenta) mas nenhum
+frame foi tracado ou copiado. Nao trocar por asset/imagem real sem essa
+decisao ser revisitada explicitamente com o usuario.
 
 ## Formato dos dados de origem (JSONL do Claude Code)
 

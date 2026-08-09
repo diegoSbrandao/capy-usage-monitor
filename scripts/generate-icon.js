@@ -60,23 +60,24 @@ function makePng(size, [r, g, b], drawFn) {
   return Buffer.concat([sig, ihdr, idat, iend]);
 }
 
-// Boneco blocado laranja com oculos pixelados (estilo meme da comunidade
-// Claude Code) — desenho geometrico original, nao traca nenhuma foto/logo.
+// Criatura pixel pessego simples: corpo + 2 pernas + olhos, inspirada no
+// bichinho do claude-usage-monitor mas desenhada do zero.
 function drawMascot(x, y) {
-  const margin = 3;
-  if (x < margin || x >= 32 - margin || y < margin || y >= 32 - margin) {
-    return [0, 0, 0, 0]; // transparente
-  }
-  // faixa dos oculos: preto com quadriculado branco (padrao "thug life")
-  if (y >= 12 && y < 18 && x >= margin + 2 && x < 32 - margin - 2) {
-    const cellX = Math.floor((x - margin) / 3);
-    const cellY = Math.floor((y - 12) / 3);
-    return (cellX + cellY) % 2 === 0 ? [241, 233, 221, 255] : [23, 20, 15, 255];
-  }
-  return [217, 112, 30, 255]; // corpo laranja
+  const margin = 5;
+  const legTop = 25;
+  const inBody = x >= margin && x < 32 - margin && y >= margin && y < legTop;
+  const inLeftLeg = x >= 8 && x < 13 && y >= legTop && y < 32 - 3;
+  const inRightLeg = x >= 19 && x < 24 && y >= legTop && y < 32 - 3;
+  if (!inBody && !inLeftLeg && !inRightLeg) return [0, 0, 0, 0];
+
+  // olhos
+  if (inBody && y >= 12 && y < 15 && (x >= 10 && x < 13)) return [36, 26, 18, 255];
+  if (inBody && y >= 12 && y < 15 && (x >= 19 && x < 22)) return [36, 26, 18, 255];
+
+  return inLeftLeg || inRightLeg ? [201, 122, 73, 255] : [221, 140, 94, 255];
 }
 
-const out = makePng(32, [217, 112, 30], drawMascot);
+const out = makePng(32, [221, 140, 94], drawMascot);
 const dir = path.join(__dirname, '..', 'assets');
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(path.join(dir, 'icon.png'), out);

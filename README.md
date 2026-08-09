@@ -1,9 +1,10 @@
 # Spark Monitor
 
 Widget de desktop (Windows) que mostra o consumo de tokens do **Claude
-Code** em tempo real, com um mascote blocado original (estilo meme da
-comunidade Claude Code) flutuando num cenário de nebulosa — tudo
-desenhado em CSS puro, nada de imagens de terceiros.
+Code** em tempo real, com uma criatura pixel simples num cenário escuro
+com nuvens e estrelas — visual inspirado nos gifs de demonstração do
+claude-usage-monitor, mas desenhado do zero em CSS (nenhum frame/imagem
+de terceiro usado).
 
 Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-monitor)
 (Clauddy) e [Claude-Glass](https://github.com/vitoriahellen/Claude-Glass).
@@ -16,10 +17,13 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
 - **Hoje e Mês estimados localmente** — a API oficial não expõe essas
   janelas, então continuam calculadas a partir dos logs locais do Claude
   Code (`~/.claude/projects/**/*.jsonl`), contra um teto configurável.
-- **Mascote com ações**: pega uma ferramenta (lupa/lápis/engrenagem
-  conforme você está lendo, editando ou rodando comando), toma café numa
-  pausa curta, dorme quando ocioso, esquenta perto do limite e comemora
-  quando a janela de 5h renova.
+- **Cards contextuais por ferramenta**: um cartão de arquivo aparece
+  enquanto você lê, um terminal enquanto roda comando, um "laptop" com
+  linhas de código + planta enquanto edita — tudo troca sozinho conforme
+  a ação detectada nos seus logs locais.
+- **Estados de humor**: toma café numa pausa curta, esquenta perto do
+  limite, fica em alerta no limite, e comemora quando a janela de 5h
+  renova.
 - **Poke**: clique no personagem por uma reação.
 - **Exportação em Excel por sessão** (`.xlsx` formatado, uma linha por
   sessão do Claude Code — não por dia).
