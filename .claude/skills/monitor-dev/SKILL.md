@@ -75,13 +75,19 @@ Sessao/Semana passam a mostrar o percentual real da conta (veja README.md).
   parado). `asleep` fecha os olhos e mostra `.spark-zzz`. Em `working`,
   um `.card` contextual aparece do lado do personagem conforme
   `[data-tool]`: `.card-read`, `.card-run`, `.card-edit`. `.mug` aparece
-  só em `light` (cafe). `.flag` (bandeirinha vermelha) é uma classe
-  `.flagged` **independente do activityState** — soma-se a qualquer
-  estado quando `snapshot.dailyAlert` é `true`, e nesse caso o texto de
-  status é substituido pela mensagem de `FLAG_MESSAGE` em `renderer.js`.
-  Duas classes efemeras controladas só no renderer (`.poked`,
-  `.celebrating`), a secao `.account` (conectar/colar codigo/desconectar),
-  e `#settingsPanel` (toggle do aviso de limite diario). `.clock` +
+  só em `light` (cafe) — e alterna com `.prop.tv` a cada 30s
+  (`sparkEl.dataset.light = 'coffee'|'tv'`, calculado em `render()` via
+  `Date.now()`) só pra dar variedade na mesma fase, nao muda a logica de
+  estado. `.flag` (bandeirinha vermelha) é uma classe `.flagged`
+  **independente do activityState** — soma-se a qualquer estado quando
+  `snapshot.dailyAlert` é `true`, e nesse caso o texto de status é
+  substituido pela mensagem de `FLAG_MESSAGE` em `renderer.js`. Duas
+  classes efemeras controladas só no renderer (`.poked`, `.celebrating`).
+  `#settingsPanel` (atras da engrenagem) agrupa tudo que nao precisa
+  estar sempre visivel: a secao `.account` (conectar/colar codigo/
+  desconectar, decisao explicita do usuario de tirar da tela principal),
+  o toggle do aviso de limite diario, e o botao de export — nessa ordem.
+  `.clock` +
   `#scene[data-period]` (`day`/`afternoon`/`night`, calculado em
   `periodForHour()` a partir da hora local real, atualizado a cada 15s)
   trocam o fundo/sol/lua/nuvens/estrelas. `body.compact` esconde tudo

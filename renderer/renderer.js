@@ -243,6 +243,12 @@ function render(snapshot) {
   sparkEl.className = `spark ${activityState}`;
   if (toolCategory) sparkEl.dataset.tool = toolCategory;
   else delete sparkEl.dataset.tool;
+  if (activityState === 'light') {
+    // Alterna entre cafe e TV a cada 30s pra dar variedade na mesma fase.
+    sparkEl.dataset.light = Math.floor(Date.now() / 30000) % 2 === 0 ? 'coffee' : 'tv';
+  } else {
+    delete sparkEl.dataset.light;
+  }
   if (currentTransient) sparkEl.classList.add(currentTransient);
   sparkEl.classList.toggle('flagged', !!dailyAlert);
 

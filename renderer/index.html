@@ -16,6 +16,27 @@
   </div>
 
   <div id="settingsPanel" class="settings-panel hidden">
+    <div class="account">
+      <div id="accountDisconnected" class="account-row">
+        <span class="account-hint">numeros estimados localmente</span>
+        <button id="connectBtn" class="account-btn">Conectar conta</button>
+      </div>
+      <div id="accountPasteRow" class="account-row hidden">
+        <input id="codeInput" class="code-input" type="text" placeholder="cole o codigo#state aqui" />
+        <button id="submitCodeBtn" class="account-btn">Confirmar</button>
+      </div>
+      <div id="accountConnected" class="account-row hidden">
+        <span class="account-connected-label">
+          <span class="live-dot"></span>
+          <span id="accountLabel">conectado</span>
+        </span>
+        <button id="logoutBtn" class="account-btn outline">Desconectar</button>
+      </div>
+      <div id="accountError" class="account-error hidden"></div>
+    </div>
+
+    <div class="settings-divider"></div>
+
     <div class="settings-row">
       <label for="dailyAlertToggle">Avisar ao atingir limite diario</label>
       <input type="checkbox" id="dailyAlertToggle" />
@@ -32,25 +53,6 @@
 
     <div class="settings-divider"></div>
     <button id="exportBtn" class="export-btn">Exportar Excel (por sessao)</button>
-  </div>
-
-  <div class="account">
-    <div id="accountDisconnected" class="account-row">
-      <span class="account-hint">numeros estimados localmente</span>
-      <button id="connectBtn" class="account-btn">Conectar conta</button>
-    </div>
-    <div id="accountPasteRow" class="account-row hidden">
-      <input id="codeInput" class="code-input" type="text" placeholder="cole o codigo#state aqui" />
-      <button id="submitCodeBtn" class="account-btn">Confirmar</button>
-    </div>
-    <div id="accountConnected" class="account-row hidden">
-      <span class="account-connected-label">
-        <span class="live-dot"></span>
-        <span id="accountLabel">conectado</span>
-      </span>
-      <button id="logoutBtn" class="account-btn outline">Desconectar</button>
-    </div>
-    <div id="accountError" class="account-error hidden"></div>
   </div>
 
   <div class="scene" id="scene">
@@ -92,6 +94,14 @@
         <div class="mug-handle"></div>
         <div class="steam s1"></div>
         <div class="steam s2"></div>
+      </div>
+
+      <div class="prop tv">
+        <div class="tv-antenna a1"></div>
+        <div class="tv-antenna a2"></div>
+        <div class="tv-body">
+          <div class="tv-screen"></div>
+        </div>
       </div>
 
       <div class="prop card card-read">
