@@ -213,6 +213,7 @@
       <div class="spark-zzz">Z z z</div>
       <div class="attention-badge"></div>
       <div class="spend-badge" title="Clique em mim: sessao gastando token demais"></div>
+      <div class="cache-warn-badge"></div>
 
       <div class="flag">
         <div class="flag-pole"></div>
@@ -312,6 +313,45 @@
     <div class="metric-bottom">
       <div class="bar-track"><div id="weeklyBar" class="bar-fill"></div></div>
       <span id="weeklyValue" class="metric-value">-</span>
+    </div>
+  </div>
+
+  <div class="section hidden" id="perModelSection">
+    <div class="label-row"><span>Limite por modelo <span class="label-sub">(oficial, semana)</span></span></div>
+    <div class="metric-card hidden" id="sonnetCard">
+      <div class="metric-top">
+        <div class="metric-name"><span>Sonnet</span></div>
+        <span id="sonnetSubtext" class="metric-subtext"></span>
+      </div>
+      <div class="metric-bottom">
+        <div class="bar-track"><div id="sonnetBar" class="bar-fill"></div></div>
+        <span id="sonnetValue" class="metric-value">-</span>
+      </div>
+    </div>
+    <div class="metric-card hidden" id="opusCard">
+      <div class="metric-top">
+        <div class="metric-name"><span>Opus</span></div>
+        <span id="opusSubtext" class="metric-subtext"></span>
+      </div>
+      <div class="metric-bottom">
+        <div class="bar-track"><div id="opusBar" class="bar-fill"></div></div>
+        <span id="opusValue" class="metric-value">-</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section hidden" id="extraUsageSection">
+    <div class="label-row">
+      <span>Credito extra <span class="label-sub">(pay-per-use)</span></span>
+      <span id="extraUsageBadge" class="badge"></span>
+    </div>
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-name"><span id="extraUsageStatus">-</span></div>
+      </div>
+      <div class="metric-bottom">
+        <span id="extraUsageValue" class="metric-value">-</span>
+      </div>
     </div>
   </div>
 

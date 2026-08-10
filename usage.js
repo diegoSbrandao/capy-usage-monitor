@@ -75,6 +75,8 @@ function readEntries(sinceMs) {
         timestamp: ts,
         model: obj.message.model || 'unknown',
         tokens: tokensForEntry(obj.message.usage),
+        cacheCreationTokens: obj.message.usage.cache_creation_input_tokens || 0,
+        cacheReadTokens: obj.message.usage.cache_read_input_tokens || 0,
         content: obj.message.content,
       };
       if (id) seenById.set(id, entry);
@@ -162,6 +164,26 @@ function getSevenDayMedian() {
   return values[3]; // mediana de 7 valores = o do meio, apos ordenar
 }
 
+// Proxy de "cache desperdicado": razao entre tokens lidos do cache
+// (cache_read, ~10% do preco normal) e o total de tokens ligados a cache
+// (leitura + criacao) na janela da sessao atual (5h, mesma escala de
+// getCurrentSessionUsage()). Uma razao baixa sugere reenvio de contexto
+// grande sem se beneficiar do cache — algo que a Anthropic recomenda
+// evitar. Retorna null se nao houver atividade de cache na janela ainda
+// (nada pra julgar) — nunca inventa um numero antes disso.
+function getCacheEfficiency() {
+  const entries = readEntries(FIVE_HOURS_MS);
+  let cacheCreationTokens = 0;
+  let cacheReadTokens = 0;
+  for (const e of entries) {
+    cacheCreationTokens += e.cacheCreationTokens;
+    cacheReadTokens += e.cacheReadTokens;
+  }
+  const total = cacheCreationTokens + cacheReadTokens;
+  if (total === 0) return null;
+  return { cacheCreationTokens, cacheReadTokens, hitRatio: cacheReadTokens / total };
+}
+
 // Nome da ultima tool_use dentro da janela informada (default: 90s, mesma
 // escala do estado "working"). Usado so pra escolher o icone de acao —
 // nao afeta calculo de tokens.
@@ -234,6 +256,9 @@ function parseSessionFile(file) {
 
   if (entryCount === 0) return null;
 
+  const cacheTotal = cacheCreationTokens + cacheReadTokens;
+  const cacheHitRatio = cacheTotal > 0 ? cacheReadTokens / cacheTotal : null;
+
   let topModel = null;
   let topModelTokens = -1;
   for (const [model, tokens] of Object.entries(tokensByModel)) {
@@ -256,6 +281,7 @@ function parseSessionFile(file) {
     outputTokens,
     cacheCreationTokens,
     cacheReadTokens,
+    cacheHitRatio,
     avgTokensPerMessage: totalTokens / entryCount,
   };
 }
@@ -396,6 +422,7 @@ module.exports = {
   getSevenDayMedian,
   tierForAvgTokensPerMessage,
   analyzeSessionCost,
+  getCacheEfficiency,
 };
 
 if (require.main === module) {

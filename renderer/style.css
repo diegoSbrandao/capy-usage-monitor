@@ -902,6 +902,37 @@ body.compact { overflow: hidden; }
   background: linear-gradient(90deg, oklch(0.72 0.15 45), oklch(0.65 0.19 25));
 }
 
+/* Aviso de cache pouco reaproveitado (proxy de "prompt desperdicado" — ver
+   getCacheEfficiency() em usage.js): soma-se a qualquer estado base, igual
+   a .flag/.attention-badge, mas e o de MENOR prioridade dos tres — sinal
+   informativo, nao urgente, por isso sem animacao de chamar atencao. */
+.cache-warn-badge {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: oklch(0.7 0.12 220);
+  color: oklch(0.98 0 0);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0);
+  box-shadow: 0 0 10px 2px oklch(0.7 0.12 220 / 0.5);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 2;
+}
+.cache-warn-badge::before { content: '⛏'; }
+.spark.cache-warn .cache-warn-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
 /* --- Props: xicara ou TV (light, alterna pra dar variedade), cards
    contextuais por ferramenta (working) --- idle nao tem prop nenhum: so
    o personagem parado, igual ao gif de referencia (sem cama/sono). */
@@ -1248,6 +1279,7 @@ body.compact .scene {
 }
 body.compact .prop { display: none !important; }
 body.compact .flag { display: none; }
+body.compact .cache-warn-badge { display: none; }
 body.compact .spark-status { display: none; }
 
 /* Brilho colorido atras do mascote (verde/amarelo/vermelho conforme a

@@ -24,6 +24,12 @@ const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 const ATTENTION_PATH = path.join(DATA_DIR, 'attention.json');
 const ATTENTION_MAX_AGE_MS = 5 * 60 * 1000;
 const SPEND_ALERT_COLD_GAP_MS = 10 * 60 * 1000;
+// Cache-waste: so avalia com volume minimo de tokens de cache na janela
+// (sessoes muito curtas naturalmente comecam com hitRatio baixo, ainda
+// sem cache pra ler) e sinaliza quando menos da metade dos tokens de
+// cache foram leituras — ver getCacheEfficiency() em usage.js.
+const CACHE_WASTE_MIN_TOKENS = 20000;
+const CACHE_WASTE_HIT_RATIO = 0.5;
 
 const FULL_SIZE = { width: 320, height: 620 };
 const COMPACT_SIZE = { width: 126, height: 148 };
@@ -199,12 +205,13 @@ function buildSnapshot() {
   // painel Settings -> Usage). Hoje/Mes nao tem equivalente na API oficial
   // e continuam sendo estimativa local contra o teto configuravel.
   const connected = auth.isConnected();
-  snap.real = { connected, session: null, week: null, sonnet: null, opus: null };
+  snap.real = { connected, session: null, week: null, sonnet: null, opus: null, extraUsage: null };
   if (connected && realUsage) {
     snap.real.session = realUsage.session;
     snap.real.week = realUsage.week;
     snap.real.sonnet = realUsage.sonnet;
     snap.real.opus = realUsage.opus;
+    snap.real.extraUsage = realUsage.extraUsage;
     snap.ratios.session = realUsage.session.pct / 100;
     snap.ratios.weekly = realUsage.week.pct / 100;
   }
@@ -220,6 +227,15 @@ function buildSnapshot() {
   // Mediana real de tokens/dia nos ultimos 7 dias (null ate ter 7 dias de
   // historico local) — dado real, nao um preco inventado.
   snap.sevenDayMedianTokens = usage.getSevenDayMedian();
+  // Proxy de "prompt desperdicado": cache pouco reaproveitado na sessao
+  // atual (ver CACHE_WASTE_* acima e getCacheEfficiency() em usage.js).
+  const cacheEfficiency = usage.getCacheEfficiency();
+  snap.cacheEfficiency = cacheEfficiency;
+  snap.cacheWaste = !!(
+    cacheEfficiency &&
+    cacheEfficiency.cacheCreationTokens + cacheEfficiency.cacheReadTokens >= CACHE_WASTE_MIN_TOKENS &&
+    cacheEfficiency.hitRatio < CACHE_WASTE_HIT_RATIO
+  );
 
   if (snap.ratios.session >= 1) {
     snap.activityState = 'alert';
@@ -371,6 +387,25 @@ const EVAL_TIER_LABEL = {
   bad: 'Excessiva',
 };
 
+// Classificacao de eficiencia de cache por sessao pro export Excel — 3
+// faixas (em vez das 2 de CACHE_WASTE_HIT_RATIO) pra dar contexto na
+// planilha, nao so alertar/nao alertar. MESMO dado local que ja usamos pro
+// badge do mascote (cacheHitRatio de usage.js::parseSessionFile) — nao le
+// UMA linha sequer de conteudo de prompt, nao chama nenhuma API/LLM, custo
+// de token ZERO (decisao deliberada: "prompt quality" de verdade exigiria
+// ler o texto, o que quebraria a linha de privacidade do projeto e custaria
+// tokens a cada export — a razao de cache e um proxy que fica so com dados
+// que o Claude Code ja registra localmente).
+function cacheHealthTier(session) {
+  const cacheTotal = (session.cacheCreationTokens || 0) + (session.cacheReadTokens || 0);
+  if (session.cacheHitRatio == null || cacheTotal < CACHE_WASTE_MIN_TOKENS) {
+    return { label: 'Sem dado', argb: 'FFB8B0A6' };
+  }
+  if (session.cacheHitRatio >= 0.8) return { label: 'Verde', argb: 'FF3EE673' };
+  if (session.cacheHitRatio >= CACHE_WASTE_HIT_RATIO) return { label: 'Amarelo', argb: 'FFFFD23F' };
+  return { label: 'Vermelho', argb: 'FFFF4D3D' };
+}
+
 async function exportHistorySessions() {
   const sessions = usage.getSessionHistory();
   const maxAvgTokensPerMessage = Math.max(1, ...sessions.map((s) => s.avgTokensPerMessage));
@@ -399,6 +434,8 @@ async function exportHistorySessions() {
     { header: 'Mensagens', key: 'entryCount', width: 12 },
     { header: 'Tokens/mensagem', key: 'avgTokensPerMessage', width: 16 },
     { header: 'Avaliacao', key: 'evaluation', width: 16 },
+    { header: 'Cache reaproveitado', key: 'cachePct', width: 18 },
+    { header: 'Eficiencia', key: 'efficiency', width: 8 },
   ];
 
   const headerRow = sheet.getRow(1);
@@ -407,9 +444,13 @@ async function exportHistorySessions() {
   headerRow.alignment = { vertical: 'middle' };
   headerRow.getCell('evaluation').note =
     'Relativa a sessao mais verbosa (mais tokens/mensagem) do proprio historico exportado, nao um numero oficial da Anthropic. <60% do pior caso = boa pratica, 60-90% = pode melhorar, >=90% = excessiva.';
+  headerRow.getCell('efficiency').note =
+    'Baseado na razao de tokens de cache lidos vs. criados na sessao (dado local, sem ler o conteudo dos prompts). '
+    + 'Verde >=80% reaproveitado, Amarelo >=50%, Vermelho <50%. "Sem dado" = sessao pequena demais pra julgar.';
 
   for (const s of sessions) {
     const tier = usage.tierForAvgTokensPerMessage(s.avgTokensPerMessage, maxAvgTokensPerMessage);
+    const cacheTier = cacheHealthTier(s);
     const row = sheet.addRow({
       sessionId: s.sessionId.slice(0, 8),
       project: s.project,
@@ -426,6 +467,8 @@ async function exportHistorySessions() {
       entryCount: s.entryCount,
       avgTokensPerMessage: Math.round(s.avgTokensPerMessage),
       evaluation: EVAL_TIER_LABEL[tier],
+      cachePct: s.cacheHitRatio == null ? null : s.cacheHitRatio,
+      efficiency: '',
     });
     row.getCell('start').numFmt = 'dd/mm/yyyy hh:mm';
     row.getCell('end').numFmt = 'dd/mm/yyyy hh:mm';
@@ -435,9 +478,12 @@ async function exportHistorySessions() {
     row.getCell('cacheCreationTokens').numFmt = '#,##0';
     row.getCell('cacheReadTokens').numFmt = '#,##0';
     row.getCell('avgTokensPerMessage').numFmt = '#,##0';
+    row.getCell('cachePct').numFmt = '0%';
     row.eachCell((cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EVAL_TIER_COLOR[tier] } };
     });
+    // So a cor da celula (sem texto) — a legenda fica na nota do cabecalho.
+    row.getCell('efficiency').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cacheTier.argb } };
   }
 
   fs.mkdirSync(path.dirname(HISTORY_XLSX_PATH), { recursive: true });
@@ -502,22 +548,24 @@ ipcMain.handle('settings:save', (event, next) => {
 // Em dev (`electron .`) o execPath e o binario do Electron, entao precisa
 // apontar path/args pro projeto explicitamente; empacotado, o exe ja e o
 // app certo, nao precisa de nada extra.
+// No Windows, getLoginItemSettings() so reconhece uma entrada custom
+// (path/args) se voce passar o MESMO path/args na leitura — sem isso ele
+// checa contra o execPath padrao (sem args), nao acha a entrada que o dev
+// criou com args, e sempre volta openAtLogin:false mesmo com o registro
+// gravado certinho. Por isso path/args tem que ser identicos em leitura
+// (osReportsAutoStart) e escrita (setAutoStart).
+function loginItemOptions() {
+  if (app.isPackaged) return {};
+  return { path: process.execPath, args: [path.resolve(process.argv[1] || '.')] };
+}
 function osReportsAutoStart() {
-  return app.getLoginItemSettings().openAtLogin;
+  return app.getLoginItemSettings(loginItemOptions()).openAtLogin;
 }
 function getAutoStart() {
   return !!settings.autoStartEnabled;
 }
 function setAutoStart(enabled) {
-  if (app.isPackaged) {
-    app.setLoginItemSettings({ openAtLogin: enabled });
-  } else {
-    app.setLoginItemSettings({
-      openAtLogin: enabled,
-      path: process.execPath,
-      args: [path.resolve(process.argv[1] || '.')],
-    });
-  }
+  app.setLoginItemSettings({ openAtLogin: enabled, ...loginItemOptions() });
   settings = { ...settings, autoStartEnabled: enabled };
   persistSettingsToDisk();
   return getAutoStart();

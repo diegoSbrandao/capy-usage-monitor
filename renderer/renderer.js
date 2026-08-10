@@ -39,7 +39,26 @@ const metrics = {
     fill: document.getElementById('weeklyBar'),
     badge: document.getElementById('weeklyBadge'),
   },
+  sonnet: {
+    subtext: document.getElementById('sonnetSubtext'),
+    value: document.getElementById('sonnetValue'),
+    fill: document.getElementById('sonnetBar'),
+  },
+  opus: {
+    subtext: document.getElementById('opusSubtext'),
+    value: document.getElementById('opusValue'),
+    fill: document.getElementById('opusBar'),
+  },
 };
+
+const perModelSectionEl = document.getElementById('perModelSection');
+const sonnetCardEl = document.getElementById('sonnetCard');
+const opusCardEl = document.getElementById('opusCard');
+
+const extraUsageSectionEl = document.getElementById('extraUsageSection');
+const extraUsageBadgeEl = document.getElementById('extraUsageBadge');
+const extraUsageStatusEl = document.getElementById('extraUsageStatus');
+const extraUsageValueEl = document.getElementById('extraUsageValue');
 
 const accountDisconnectedEl = document.getElementById('accountDisconnected');
 const accountPasteRowEl = document.getElementById('accountPasteRow');
@@ -73,6 +92,7 @@ let lastSnapshot = null;
 const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 const ATTENTION_MESSAGE = 'Terminal te chamando, da uma olhada!';
 const RESET_MESSAGE = 'Prontos de novo!';
+const CACHE_WASTE_MESSAGE = 'Cache pouco aproveitado, contexto repetindo sem reuso.';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
@@ -140,6 +160,15 @@ function renderSpendAnalysis(a) {
       <div class="spend-offender-track"><div class="spend-offender-fill" style="width:${pct}%"></div></div>
     `;
     spendOffendersEl.appendChild(row);
+  }
+}
+
+function formatMoney(amount, currency) {
+  if (!currency) return String(amount);
+  try {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`;
   }
 }
 
@@ -351,7 +380,7 @@ function renderCompactPct(ratio) {
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset, spendAlert } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset, spendAlert, cacheWaste } = snapshot;
 
   renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
@@ -359,6 +388,33 @@ function render(snapshot) {
   setBadge(metrics.session.badge, !!real.session);
   setBadge(metrics.weekly.badge, !!real.week);
   updateAccountUI(real.connected);
+
+  // Buckets por modelo (Sonnet/Opus) so existem no retorno oficial da API
+  // pra quem tem plano Max — sem conta conectada ou em Pro, ambos vem
+  // null e a secao inteira fica escondida (sem teto local pra fallback,
+  // nao tem como estimar isso por modelo especifico).
+  const hasSonnet = !!real.sonnet;
+  const hasOpus = !!real.opus;
+  perModelSectionEl.classList.toggle('hidden', !hasSonnet && !hasOpus);
+  sonnetCardEl.classList.toggle('hidden', !hasSonnet);
+  opusCardEl.classList.toggle('hidden', !hasOpus);
+  if (hasSonnet) renderMetric(metrics.sonnet, 0, 0, real.sonnet.pct / 100, real.sonnet, true);
+  if (hasOpus) renderMetric(metrics.opus, 0, 0, real.opus.pct / 100, real.opus, true);
+
+  // Credito avulso (pay-per-use): so aparece quando conectado e a conta
+  // tem essa opcao habilitada — e' o que explica continuar usando o
+  // Claude mesmo com Sessao (5h) em 100%.
+  const eu = real.extraUsage;
+  const hasExtraUsage = !!(eu && eu.enabled);
+  extraUsageSectionEl.classList.toggle('hidden', !hasExtraUsage);
+  if (hasExtraUsage) {
+    extraUsageBadgeEl.textContent = eu.spendLimitReached ? 'limite atingido' : 'ativo';
+    extraUsageBadgeEl.classList.toggle('real', !eu.spendLimitReached);
+    extraUsageStatusEl.textContent = eu.spendLimitReached
+      ? 'Limite de gasto extra batido'
+      : 'Cobrindo alem do teto do plano';
+    extraUsageValueEl.textContent = `${formatMoney(eu.usedAmount, eu.currency)} usados`;
+  }
 
   renderModelBreakdown(weeklyByModel);
   renderRealModelPct(real.sonnet, real.opus);
@@ -395,9 +451,11 @@ function render(snapshot) {
   sparkEl.classList.toggle('flagged', !!dailyAlert);
   sparkEl.classList.toggle('attention', !!attention);
   sparkEl.classList.toggle('spendAlert', !!spendAlert);
+  sparkEl.classList.toggle('cache-warn', !!cacheWaste);
 
   // Prioridade: precisa de voce agora (terminal) > acabou de renovar >
-  // meta diaria > estado normal. Reset so aparece durante a propria
+  // meta diaria > cache desperdicado (o mais soft dos tres, so
+  // informativo) > estado normal. Reset so aparece durante a propria
   // janela transiente de `.celebrating` (nao fica preso na tela).
   sparkStatusEl.textContent = attention
     ? ATTENTION_MESSAGE
@@ -405,12 +463,16 @@ function render(snapshot) {
       ? RESET_MESSAGE
       : dailyAlert
         ? FLAG_MESSAGE
-        : (STATUS_LABEL[activityState] || activityState);
+        : cacheWaste
+          ? CACHE_WASTE_MESSAGE
+          : (STATUS_LABEL[activityState] || activityState);
   statusDotEl.style.background = attention
     ? 'oklch(0.75 0.15 85)'
     : dailyAlert
       ? STATUS_DOT_COLOR.alert
-      : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
+      : cacheWaste
+        ? 'oklch(0.7 0.12 220)'
+        : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
   renderCompactPct(ratios.session);
 }
 

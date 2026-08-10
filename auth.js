@@ -174,11 +174,24 @@ async function fetchUsage() {
     throw Object.assign(new Error(`usage ${res.status}: ${body.slice(0, 150)}`), { status: res.status });
   }
   const j = await res.json();
+  const eu = j.extra_usage;
   return {
     session: win(j.five_hour) || { pct: 0, resetMs: null },
     week: win(j.seven_day) || { pct: 0, resetMs: null },
     sonnet: win(j.seven_day_sonnet),
     opus: win(j.seven_day_opus),
+    // Credito avulso (pay-per-use) que a Anthropic cobra automaticamente
+    // quando os limites do plano (session/week acima) estouram — e' a
+    // razao de dar pra continuar usando o Claude mesmo com sessao em
+    // 100%, quando isso ta habilitado na conta.
+    extraUsage: eu
+      ? {
+          enabled: !!eu.is_enabled,
+          usedAmount: (eu.used_credits || 0) / 10 ** (eu.decimal_places ?? 2),
+          currency: eu.currency || null,
+          spendLimitReached: !!eu.spend_limit_reached,
+        }
+      : null,
   };
 }
 
