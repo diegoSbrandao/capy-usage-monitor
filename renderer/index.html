@@ -74,11 +74,32 @@
   </div>
 
   <div id="spendPanel" class="spend-panel hidden">
-    <div class="spend-panel-header">
-      <span>Por que essa sessao esta pesando</span>
+    <div class="spend-header">
+      <div class="spend-header-title">
+        <span class="spend-icon">&#9888;</span>
+        <span>Por que essa sessao esta pesando</span>
+      </div>
       <button id="spendCloseBtn" title="Fechar">&#x2715;</button>
     </div>
-    <div id="spendPanelBody" class="spend-panel-body">Analisando...</div>
+    <div id="spendSubtitle" class="spend-subtitle">Analisando...</div>
+
+    <div class="spend-stats">
+      <div class="spend-stat">
+        <span id="spendAvgValue" class="spend-stat-value">-</span>
+        <span class="spend-stat-label">media por mensagem</span>
+      </div>
+      <div class="spend-stat spend-stat-warn">
+        <span id="spendCacheValue" class="spend-stat-value">-</span>
+        <span class="spend-stat-label">e contexto relido</span>
+      </div>
+    </div>
+
+    <p id="spendExplainer" class="spend-explainer"></p>
+
+    <div id="spendOffendersLabel" class="spend-offenders-label hidden">Maiores consumidores</div>
+    <div id="spendOffenders" class="spend-offenders"></div>
+
+    <button id="spendClearBtn" class="btn-primary">Iniciar conversa nova</button>
   </div>
 
   <div class="scene" id="scene">
