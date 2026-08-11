@@ -101,11 +101,23 @@ function getWeeklyModelBreakdown() {
   return byModel;
 }
 
+// Chave de dia no fuso LOCAL, nao UTC. toISOString() e' sempre UTC -
+// uso feito a noite (fuso negativo, ex. Brasil UTC-3) cairia no balde
+// de "amanha" em vez de "hoje", distorcendo o heatmap/mediana. Mesma
+// funcao usada tanto pra gravar quanto pra consultar as chaves.
+function localDateKey(ts) {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getThirtyDayHeatmap() {
   const entries = readEntries(THIRTY_DAYS_MS);
   const byDay = {};
   for (const e of entries) {
-    const day = new Date(e.timestamp).toISOString().slice(0, 10);
+    const day = localDateKey(e.timestamp);
     byDay[day] = (byDay[day] || 0) + e.tokens;
   }
   return byDay;
@@ -123,10 +135,16 @@ function sumTokens(map) {
   return Object.values(map).reduce((sum, v) => sum + v, 0);
 }
 
-// "Hoje" = janela real de 24h corridas (nao dia de calendario em UTC).
-function getLast24hTokens() {
-  const entries = readEntries(ONE_DAY_MS);
-  return entries.reduce((sum, e) => sum + e.tokens, 0);
+// "Hoje" = dia de calendario LOCAL (desde meia-noite), nao janela movel
+// de 24h - pedido explicito do usuario, pra bater com a barra de "hoje"
+// do heatmap (mesmo criterio de dia dos dois lugares da tela).
+function getTodayTokens() {
+  const now = new Date();
+  const startOfDayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const entries = readEntries(ONE_DAY_MS); // superset seguro: um dia local nunca passa de 24h
+  return entries
+    .filter((e) => e.timestamp >= startOfDayMs)
+    .reduce((sum, e) => sum + e.tokens, 0);
 }
 
 // "Mes" = mes corrente (do dia 1 local ate agora), nao uma janela
@@ -157,7 +175,7 @@ function getSevenDayMedian() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = localDateKey(d);
     values.push(dailyLast30[key] || 0);
   }
   values.sort((a, b) => a - b);
@@ -320,9 +338,8 @@ function tierForAvgTokensPerMessage(avg, maxAvg) {
 function analyzeSessionCost(sinceMs) {
   const windowMs = sinceMs == null ? FIVE_HOURS_MS : sinceMs;
   const cutoff = Date.now() - windowMs;
-  const toolNameById = {};
   const byTool = {};
-  const seenIds = new Set();
+  const bySession = {};
   let totalTokens = 0;
   let entryCount = 0;
   let inputTokens = 0;
@@ -337,6 +354,12 @@ function analyzeSessionCost(sinceMs) {
     } catch {
       continue;
     }
+    const toolNameById = {};
+    const seenIds = new Set();
+    const sessionKey = path.basename(file, '.jsonl');
+    let sessionTokens = 0;
+    let sessionCwd = null;
+
     for (const line of raw.split('\n')) {
       if (!line.trim()) continue;
       let obj;
@@ -345,6 +368,11 @@ function analyzeSessionCost(sinceMs) {
       } catch {
         continue;
       }
+      // cwd e propriedade da sessao inteira, nao de uma entrada dentro
+      // da janela de tempo - captura mesmo em linhas fora do cutoff,
+      // senao uma sessao com atividade so no inicio nunca teria label.
+      if (!sessionCwd && obj.cwd) sessionCwd = obj.cwd;
+
       const ts = Date.parse(obj.timestamp);
       if (Number.isNaN(ts) || ts < cutoff) continue;
 
@@ -358,7 +386,9 @@ function analyzeSessionCost(sinceMs) {
         if (id && seenIds.has(id)) continue;
         if (id) seenIds.add(id);
         const u = obj.message.usage;
-        totalTokens += tokensForEntry(u);
+        const tokens = tokensForEntry(u);
+        totalTokens += tokens;
+        sessionTokens += tokens;
         entryCount += 1;
         inputTokens += u.input_tokens || 0;
         outputTokens += u.output_tokens || 0;
@@ -376,12 +406,23 @@ function analyzeSessionCost(sinceMs) {
         }
       }
     }
+
+    if (sessionTokens > 0) {
+      bySession[sessionKey] = {
+        sessionId: sessionKey,
+        project: sessionCwd ? path.basename(sessionCwd) : path.basename(path.dirname(file)),
+        cwd: sessionCwd,
+        tokens: sessionTokens,
+      };
+    }
   }
 
   const topOffenders = Object.entries(byTool)
     .map(([name, v]) => ({ name, count: v.count, approxTokens: v.approxTokens }))
     .sort((a, b) => b.approxTokens - a.approxTokens)
     .slice(0, 5);
+
+  const sessionBreakdown = Object.values(bySession).sort((a, b) => b.tokens - a.tokens);
 
   return {
     windowHours: windowMs / (60 * 60 * 1000),
@@ -393,7 +434,57 @@ function analyzeSessionCost(sinceMs) {
     cacheCreationTokens,
     cacheReadTokens,
     topOffenders,
+    activeSessionCount: sessionBreakdown.length,
+    topSession: sessionBreakdown[0] || null,
+    topSessionSharePct: totalTokens > 0 && sessionBreakdown[0]
+      ? Math.round((sessionBreakdown[0].tokens / totalTokens) * 100)
+      : 0,
   };
+}
+
+// Quanto cada ferramenta (Read, Bash, Grep, etc.) pesou em tokens de
+// retorno, no historico INTEIRO (sem corte de tempo — usado no export
+// Excel, que tambem cobre o historico completo de sessoes). approxTokens
+// e' estimativa por tamanho de texto (chars/4), mesma logica de
+// analyzeSessionCost, so' que sem janela de tempo.
+function getToolBreakdownAllTime() {
+  const byTool = {};
+  for (const file of listTranscriptFiles()) {
+    let raw;
+    try {
+      raw = fs.readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    const toolNameById = {};
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      let obj;
+      try {
+        obj = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (obj.type === 'assistant' && obj.message && Array.isArray(obj.message.content)) {
+        for (const c of obj.message.content) {
+          if (c.type === 'tool_use' && c.id && c.name) toolNameById[c.id] = c.name;
+        }
+      } else if (obj.type === 'user' && obj.message && Array.isArray(obj.message.content)) {
+        for (const c of obj.message.content) {
+          if (c.type !== 'tool_result') continue;
+          const name = toolNameById[c.tool_use_id] || 'outro';
+          const text = typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '');
+          const approxTokens = Math.round(text.length / 4);
+          byTool[name] = byTool[name] || { count: 0, approxTokens: 0 };
+          byTool[name].count += 1;
+          byTool[name].approxTokens += approxTokens;
+        }
+      }
+    }
+  }
+  return Object.entries(byTool)
+    .map(([name, v]) => ({ name, count: v.count, approxTokens: v.approxTokens }))
+    .sort((a, b) => b.approxTokens - a.approxTokens);
 }
 
 function getSnapshot() {
@@ -404,7 +495,7 @@ function getSnapshot() {
     currentSession: getCurrentSessionUsage(),
     weeklyByModel,
     dailyLast30,
-    todayTokens: getLast24hTokens(),
+    todayTokens: getTodayTokens(),
     weeklyTokens: sumTokens(weeklyByModel),
     monthlyTokens: getCurrentMonthTokens(),
     lastActivityMs: getLastActivityMs(),
@@ -423,6 +514,7 @@ module.exports = {
   tierForAvgTokensPerMessage,
   analyzeSessionCost,
   getCacheEfficiency,
+  getToolBreakdownAllTime,
 };
 
 if (require.main === module) {

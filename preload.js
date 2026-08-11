@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('capyApi', {
   requestSnapshot: () => ipcRenderer.invoke('usage:request'),
   exportXlsx: () => ipcRenderer.invoke('usage:exportXlsx'),
   analyzeSpend: () => ipcRenderer.invoke('usage:analyzeSpend'),
-  copyClearHint: () => clipboard.writeText('/clear'),
+  openContinueTerminal: () => ipcRenderer.invoke('usage:openContinueTerminal'),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
   onUpdate: (callback) => {
     ipcRenderer.on('usage:update', (_event, snapshot) => callback(snapshot));

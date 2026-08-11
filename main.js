@@ -1,9 +1,10 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, dialog, shell, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, dialog, shell, screen, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { spawn } = require('child_process');
 
 const ExcelJS = require('exceljs');
 
@@ -31,8 +32,8 @@ const SPEND_ALERT_COLD_GAP_MS = 10 * 60 * 1000;
 const CACHE_WASTE_MIN_TOKENS = 20000;
 const CACHE_WASTE_HIT_RATIO = 0.5;
 
-const FULL_SIZE = { width: 320, height: 620 };
-const COMPACT_SIZE = { width: 126, height: 148 };
+const FULL_SIZE = { width: 320, height: 648 };
+const COMPACT_SIZE = { width: 210, height: 68 };
 const COMPACT_MARGIN = 16;
 
 const HARDCODED_FALLBACK_CONFIG = {
@@ -265,22 +266,14 @@ function buildSnapshot() {
   );
   snap.attention = isAttentionActive(snap.lastActivityMs);
 
-  // "Gasto excessivo desnecessario": liga se a media de tokens/mensagem
-  // da sessao atual estiver na faixa "Excessiva" (mesmo corte do Excel,
-  // relativo ao proprio historico) OU se a sessao (5h) estiver perto/no
-  // teto - qualquer um dos dois. So considera sessoes "frias" (sem
-  // atividade ha pelo menos SPEND_ALERT_COLD_GAP_MS) como referencia de
-  // historico, senao a sessao em andamento (naturalmente a mais
-  // "verbosa" por ainda estar rodando) se compararia com ela mesma.
-  const coldSessions = usage.getSessionHistory().filter(
-    (s) => Date.now() - s.endMs > SPEND_ALERT_COLD_GAP_MS
-  );
-  const maxHistoricalAvg = Math.max(0, ...coldSessions.map((s) => s.avgTokensPerMessage));
-  const currentAvg = snap.currentSession.entryCount > 0
-    ? snap.currentSession.totalTokens / snap.currentSession.entryCount
-    : 0;
-  const avgTier = usage.tierForAvgTokensPerMessage(currentAvg, maxHistoricalAvg);
-  snap.spendAlert = avgTier === 'bad' || snap.ratios.session >= 0.9;
+  // So mostra o card "sessao esta pesando" quando a sessao (5h) esta
+  // mesmo perto/no teto - o mesmo percentual REAL que o usuario ja ve
+  // no badge "Sessao (5h)". Tinha um segundo gatilho comparando a media
+  // de tokens/mensagem contra o proprio historico, mas isso e' um
+  // numero que o usuario nunca ve em lugar nenhum - disparava o alerta
+  // sem bater com nada visivel na tela (mesma classe de confusao que o
+  // dailyAlert ja evitou de proposito, ver comentario abaixo).
+  snap.spendAlert = snap.ratios.session >= 0.9;
 
   return snap;
 }
@@ -486,6 +479,41 @@ async function exportHistorySessions() {
     row.getCell('efficiency').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cacheTier.argb } };
   }
 
+  // Aba nova: onde foi gasto tokens por ferramenta (Read, Bash, Grep,
+  // etc.), historico inteiro (mesmo escopo das sessoes acima) - pedido
+  // do usuario pra saber o que mais pesa alem de olhar sessao por sessao.
+  const toolBreakdown = usage.getToolBreakdownAllTime();
+  const toolTotal = Math.max(1, toolBreakdown.reduce((sum, t) => sum + t.approxTokens, 0));
+  const toolSheet = workbook.addWorksheet('Ferramentas', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  toolSheet.columns = [
+    { header: 'Ferramenta', key: 'name', width: 20 },
+    { header: 'Chamadas', key: 'count', width: 12 },
+    { header: 'Tokens (aprox.)', key: 'approxTokens', width: 16 },
+    { header: '% do total', key: 'pct', width: 12 },
+  ];
+  const toolHeaderRow = toolSheet.getRow(1);
+  toolHeaderRow.font = { bold: true, color: { argb: 'FF1B1712' } };
+  toolHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97757' } };
+  toolHeaderRow.alignment = { vertical: 'middle' };
+  toolHeaderRow.getCell('approxTokens').note =
+    'Estimativa por tamanho do texto de retorno da ferramenta (chars/4) - nao vem com `usage` proprio da API, so a resposta inteira tem esse dado.';
+  for (const t of toolBreakdown) {
+    const row = toolSheet.addRow({
+      name: t.name,
+      count: t.count,
+      approxTokens: t.approxTokens,
+      pct: t.approxTokens / toolTotal,
+    });
+    row.getCell('count').numFmt = '#,##0';
+    row.getCell('approxTokens').numFmt = '#,##0';
+    row.getCell('pct').numFmt = '0.0%';
+  }
+  if (toolBreakdown.length > 0) {
+    toolSheet.getRow(2).font = { bold: true };
+  }
+
   fs.mkdirSync(path.dirname(HISTORY_XLSX_PATH), { recursive: true });
   await workbook.xlsx.writeFile(HISTORY_XLSX_PATH);
 
@@ -501,7 +529,48 @@ ipcMain.handle('usage:exportXlsx', async () => {
   await exportHistorySessions();
   return HISTORY_XLSX_PATH;
 });
-ipcMain.handle('usage:analyzeSpend', () => usage.analyzeSessionCost());
+ipcMain.handle('usage:analyzeSpend', () => {
+  const analysis = usage.analyzeSessionCost();
+  const coldSessions = usage.getSessionHistory().filter(
+    (s) => Date.now() - s.endMs > SPEND_ALERT_COLD_GAP_MS
+  );
+  const maxHistoricalAvg = Math.max(0, ...coldSessions.map((s) => s.avgTokensPerMessage));
+  analysis.avgTier = usage.tierForAvgTokensPerMessage(analysis.avgTokensPerMessage, maxHistoricalAvg);
+  return analysis;
+});
+// Abre um terminal novo ja rodando `claude --continue` na pasta da
+// sessao mais pesada da janela de 5h — retoma com contexto intacto em
+// vez de perder tudo. --continue sozinho NAO economiza token nenhum
+// (recarrega o historico inteiro) - quem compacta de verdade e' o
+// comando /compact, por isso ele ja fica copiado pra colar assim que a
+// sessao retomada carregar.
+ipcMain.handle('usage:openContinueTerminal', () => {
+  const analysis = usage.analyzeSessionCost();
+  const cwd = analysis.topSession && analysis.topSession.cwd;
+  if (!cwd || !fs.existsSync(cwd)) {
+    return { ok: false, error: 'nao achei a pasta da sessao ativa' };
+  }
+  const mintty = 'C:\\Program Files\\Git\\usr\\bin\\mintty.exe';
+  if (!fs.existsSync(mintty)) {
+    return { ok: false, error: 'Git Bash nao encontrado (esperado em ' + mintty + ')' };
+  }
+  try {
+    // -c 'cd ... && claude --continue; exec bash': roda o continue e,
+    // quando ele sair (erro, ctrl+c, ou fim), cai num bash interativo
+    // em vez de fechar a janela sozinha.
+    const bashCwd = cwd.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, d) => `/${d.toLowerCase()}`);
+    const cmd = `cd "${bashCwd}" && claude --continue; exec bash`;
+    const child = spawn(mintty, ['-e', 'bash', '-c', cmd], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+    clipboard.writeText('/compact');
+    return { ok: true, cwd };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
 ipcMain.handle('window:hide', () => {
   if (mainWindow) mainWindow.hide();
 });
