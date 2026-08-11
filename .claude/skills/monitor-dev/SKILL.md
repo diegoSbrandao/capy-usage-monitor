@@ -209,8 +209,11 @@ extrair o HTML de verdade.
   janela. A barra continua colorida pela cor de marca via `.bar-fill.accent`
   (nao mais tier verde->vermelho, ver bullet de honestidade dos dados) e
   a largura usa o teto pessoal de `config.json` (só sinal visual, nunca
-  em texto). "Hoje" é uma janela real de 24h corridas
-  (`usage.js::getLast24hTokens()`, não dia de calendário). **"Mês"
+  em texto). "Hoje" é o dia de calendário LOCAL, desde meia-noite
+  (`usage.js::getTodayTokens()`) — era janela móvel de 24h antes, mas o
+  usuário pediu pra bater com o mesmo critério de dia da barra "hoje" do
+  heatmap (os dois mostravam números diferentes pro mesmo rótulo, o que
+  confundia). **"Mês"
   (`usage.js::getCurrentMonthTokens()`, `snap.monthlyTokens`,
   `ratios.monthly`) continua calculado no snapshot mas não aparece mais
   em lugar nenhum da UI** — o usuário pediu pra tirar o card inteiro

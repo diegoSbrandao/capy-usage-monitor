@@ -10,15 +10,8 @@ body {
   background: oklch(0.12 0.006 260);
   color: oklch(0.92 0.006 260);
   user-select: none;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
-
-/* Scroll funcional (roda do mouse) mas sem barra visivel — janela fixa
-   e pequena de proposito, uma trilha lateral ficaria feia aqui. */
-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
-
-body.compact { overflow: hidden; }
 
 .titlebar {
   -webkit-app-region: drag;
@@ -43,6 +36,29 @@ body.compact { overflow: hidden; }
   border-radius: 5px;
   background: linear-gradient(135deg, oklch(0.72 0.15 45), oklch(0.68 0.17 30));
   flex-shrink: 0;
+}
+
+.titlebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.titlebar-title { line-height: 1.2; }
+.titlebar-email {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: oklch(0.6 0.01 260);
+  min-width: 0;
+}
+.titlebar-email #titlebarEmailText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
 }
 
 .titlebar-actions {
@@ -255,6 +271,26 @@ body.compact { overflow: hidden; }
   background: oklch(0.7 0.17 25 / 0.12);
   transform: none;
 }
+
+.settings-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: oklch(0.20 0.008 260);
+  border: 1px solid oklch(0.27 0.008 260);
+  border-radius: 10px;
+  padding: 11px;
+  color: oklch(0.80 0.006 260);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.settings-logout-btn:hover { color: oklch(0.72 0.16 25); border-color: oklch(0.72 0.16 25); }
+.settings-logout-icon { flex-shrink: 0; }
 .code-input {
   flex: 1;
   min-width: 0;
@@ -1109,6 +1145,11 @@ body.compact { overflow: hidden; }
   border: 1px solid oklch(0.26 0.008 260);
   border-radius: 10px;
 }
+/* Sessao (5h)/Hoje/Semana: layout flat, sem caixa/borda - referencia
+   do design do usuario, mais minimalista que o .metric-card. */
+.metric-row {
+  margin: 14px 14px 0;
+}
 .metric-top {
   display: flex;
   align-items: baseline;
@@ -1198,6 +1239,49 @@ body.compact { overflow: hidden; }
 }
 .label-sub { font-weight: 500; color: oklch(0.55 0.01 260); font-size: 11px; }
 
+/* Credito extra: uma linha so, sem card/badge - layout minimalista
+   pedido pelo usuario (referencia no design). */
+.extra-credit-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.extra-credit-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.extra-credit-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3ee673;
+  align-self: center;
+  flex-shrink: 0;
+}
+.extra-credit-dot.danger { background: #ff4d3d; }
+.extra-credit-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: oklch(0.9 0.006 260);
+}
+.extra-credit-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: oklch(0.55 0.01 260);
+}
+.extra-credit-value {
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(0.75 0.008 260);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.extra-credit-value.danger { color: #ff4d3d; }
+
 .model-list {
   display: flex;
   flex-direction: column;
@@ -1238,7 +1322,7 @@ body.compact { overflow: hidden; }
   display: flex;
   align-items: flex-end;
   gap: 2.5px;
-  height: 12px;
+  height: 28px;
 }
 .heatmap .bar {
   flex: 1;
@@ -1262,20 +1346,39 @@ body.compact .metric-card,
 body.compact .section {
   display: none;
 }
-body.compact .titlebar { padding: 4px 6px; }
-/* So o iconezinho da marca fica (sem o texto "Spark Monitor" — nao cabe
-   numa janela tao pequena); gear/minus/close continuam iguais aos da
-   janela cheia, sem estilo especial. */
-body.compact .titlebar-brand span:last-child { display: none; }
+/* Minimizado vira so a pill (sem barra de titulo/engrenagem/minus/X —
+   restaurar agora e via o botao de expandir dentro da propria pill). */
+body.compact .titlebar { display: none; }
 body.compact .clock-chip,
 body.compact .sun,
 body.compact .moon,
 body.compact .cloud,
 body.compact .star { display: none !important; }
 body.compact .scene {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
   height: auto;
-  padding: 8px 0 10px;
-  gap: 8px;
+  padding: 10px;
+  gap: 10px;
+  border-radius: 16px;
+  background: oklch(0.16 0.01 260) !important;
+  -webkit-app-region: drag;
+}
+/* Titlebar sumiu no compacto - a pill inteira vira a area de arrastar
+   a janela; so o botao de expandir precisa continuar clicavel. */
+body.compact .compact-actions { -webkit-app-region: no-drag; }
+body.compact .spark-footer { flex: 1; min-width: 0; }
+/* Mascote continua o mesmo (grid/pixel-art e animacao "breathe"
+   intocados) - so reduzido visualmente via scale num wrapper externo.
+   Escalar o .spark direto nao funciona: a animacao dele anima
+   `transform` (translateY), e isso sobrescreve qualquer scale estatico
+   no mesmo elemento a cada frame. Margem negativa compensa a caixa de
+   layout, que o transform nao encolhe. */
+body.compact .spark-scale-wrap {
+  transform: scale(0.55);
+  transform-origin: center;
+  margin: -14px -15px;
 }
 body.compact .prop { display: none !important; }
 body.compact .flag { display: none; }
@@ -1298,20 +1401,67 @@ body.compact .spark::before {
 
 .compact-pct-row {
   display: none;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
 body.compact .compact-pct-row { display: flex; }
-.compact-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #3ee673;
-  box-shadow: 0 0 6px 1px #3ee673;
-}
-.compact-dot.warn { background: #ffd23f; box-shadow: 0 0 6px 1px #ffd23f; }
-.compact-dot.danger { background: #ff4d3d; box-shadow: 0 0 6px 1px #ff4d3d; }
 body.compact .compact-pct {
   display: inline;
-  font-size: 15px;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 19px;
+  font-weight: 800;
 }
+.compact-meta-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: oklch(0.6 0.01 260);
+  white-space: nowrap;
+}
+/* Faixa fina no rodape da pill inteira (nao so da coluna de texto) -
+   .scene ja tem overflow:hidden, entao ela fica recortada pelas bordas
+   arredondadas do card sem precisar de border-radius propria. */
+.compact-bar-track {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: oklch(0.26 0.008 260);
+}
+body.compact .compact-bar-track { display: block; }
+.compact-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #3ee673;
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.compact-bar-fill.warn { background: #ffd23f; }
+.compact-bar-fill.danger { background: #ff4d3d; }
+
+.compact-actions {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+}
+body.compact .compact-actions { display: flex; }
+.compact-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, oklch(0.72 0.15 45), oklch(0.6 0.17 32));
+  border: none;
+  padding: 0;
+  color: oklch(0.15 0.01 260);
+  cursor: pointer;
+  box-shadow: 0 2px 8px oklch(0.65 0.17 40 / 0.4);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.compact-expand-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }

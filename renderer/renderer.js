@@ -56,15 +56,15 @@ const sonnetCardEl = document.getElementById('sonnetCard');
 const opusCardEl = document.getElementById('opusCard');
 
 const extraUsageSectionEl = document.getElementById('extraUsageSection');
-const extraUsageBadgeEl = document.getElementById('extraUsageBadge');
-const extraUsageStatusEl = document.getElementById('extraUsageStatus');
+const extraUsageDotEl = document.getElementById('extraUsageDot');
 const extraUsageValueEl = document.getElementById('extraUsageValue');
 
 const accountDisconnectedEl = document.getElementById('accountDisconnected');
 const accountPasteRowEl = document.getElementById('accountPasteRow');
 const accountConnectedEl = document.getElementById('accountConnected');
-const accountLabelEl = document.getElementById('accountLabel');
 const accountErrorEl = document.getElementById('accountError');
+const titlebarEmailEl = document.getElementById('titlebarEmail');
+const titlebarEmailTextEl = document.getElementById('titlebarEmailText');
 const connectBtn = document.getElementById('connectBtn');
 const submitCodeBtn = document.getElementById('submitCodeBtn');
 const codeInput = document.getElementById('codeInput');
@@ -82,7 +82,8 @@ const autoStartToggle = document.getElementById('autoStartToggle');
 const clockEl = document.getElementById('clock');
 const sceneEl = document.getElementById('scene');
 const compactPctEl = document.getElementById('compactPct');
-const compactDotEl = document.getElementById('compactDot');
+const compactBarFillEl = document.getElementById('compactBarFill');
+const compactExpandBtn = document.getElementById('compactExpandBtn');
 
 let showingPasteRow = false;
 let profileRequested = false;
@@ -142,10 +143,36 @@ function renderSpendAnalysis(a) {
   spendSubtitleEl.textContent = `Ultimas ${a.windowHours}h · ${formatTokens(a.totalTokens)} tokens · ${a.entryCount} mensagens`;
   spendAvgValueEl.textContent = formatTokens(Math.round(a.avgTokensPerMessage));
   spendCacheValueEl.textContent = `${cacheSharePct}%`;
-  spendExplainerEl.textContent = 'O contexto cresce a cada resposta e nao diminui sozinho — conversas longas ficam caras. Comece uma conversa nova pra zerar.';
+
+  const offenders = a.topOffenders.filter((o) => o.approxTokens > 0);
+  const topOffender = offenders[0];
+  const base = 'O contexto cresce a cada resposta e nao diminui sozinho — conversas longas ficam caras.';
+
+  // Cada terminal Claude Code grava seu proprio arquivo de sessao -
+  // topSession vem de usage.js agrupado por sessionId. IMPORTANTE: isso
+  // conta sessoes com atividade na janela, nao terminais que ainda
+  // estao abertos agora - um terminal fechado ha 4h ainda entra na
+  // janela de 5h. Por isso o texto nao diz "terminais ativos".
+  let sessionNote = '';
+  if (a.activeSessionCount > 1 && a.topSession) {
+    sessionNote = ` ${a.activeSessionCount} sessoes tiveram atividade nessa janela de ${a.windowHours}h (podem ja estar fechadas) — a de "${a.topSession.project}" pesou mais, ${a.topSessionSharePct}% do total.`;
+  }
+
+  let explainer;
+  if (a.avgTier === 'bad' && topOffender) {
+    explainer = `${base} ${topOffender.name} sozinho ja consumiu ${formatTokens(topOffender.approxTokens)} tokens nessa janela — e o maior peso agora.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+  } else if (a.avgTier === 'bad') {
+    explainer = `${base} Media por mensagem esta na faixa mais alta do seu historico.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+  } else if (a.avgTier === 'warn' && topOffender) {
+    explainer = `${base} ${topOffender.name} e quem mais pesa por enquanto (${formatTokens(topOffender.approxTokens)} tokens).${sessionNote} De olho antes de crescer mais.`;
+  } else if (cacheSharePct < 50 && a.totalTokens > 0) {
+    explainer = `${base} Pouco cache reaproveitado ainda (${cacheSharePct}%) — cada resposta esta relendo bastante contexto do zero.${sessionNote}`;
+  } else {
+    explainer = `${base}${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+  }
+  spendExplainerEl.textContent = explainer;
 
   spendOffendersEl.innerHTML = '';
-  const offenders = a.topOffenders.filter((o) => o.approxTokens > 0);
   spendOffendersLabelEl.classList.toggle('hidden', offenders.length === 0);
   const max = Math.max(1, ...offenders.map((o) => o.approxTokens));
   for (const o of offenders) {
@@ -254,9 +281,10 @@ function updateAccountUI(connected) {
     if (!profileRequested) {
       profileRequested = true;
       window.capyApi.getProfile().then((p) => {
-        accountLabelEl.textContent = p && p.email
-          ? `${p.email}${p.plan ? ' · ' + p.plan : ''}`
-          : 'conectado';
+        if (p && p.email) {
+          titlebarEmailTextEl.textContent = p.email;
+          titlebarEmailEl.classList.remove('hidden');
+        }
       });
     }
   } else {
@@ -264,6 +292,7 @@ function updateAccountUI(connected) {
     profileRequested = false;
     accountDisconnectedEl.classList.toggle('hidden', showingPasteRow);
     accountPasteRowEl.classList.toggle('hidden', !showingPasteRow);
+    titlebarEmailEl.classList.add('hidden');
   }
 }
 
@@ -307,9 +336,14 @@ function renderRealModelPct(sonnet, opus) {
   realModelPctEl.classList.remove('hidden');
 }
 
+// Raiz quadrada em vez de razao linear: um unico dia excepcional (ex.:
+// sessao maratona de milhares de mensagens) nao pode esmagar a escala
+// e jogar todo o resto do mes pro piso quase invisivel - sqrt comprime
+// a distancia até o pico mas ainda preserva diferenca entre dias
+// "normais" (o que a razao linear contra o maximo bruto perdia).
 function levelFor(tokens, max) {
   if (!max || tokens === 0) return 0;
-  const ratio = tokens / max;
+  const ratio = Math.sqrt(tokens) / Math.sqrt(max);
   if (ratio > 0.75) return 4;
   if (ratio > 0.5) return 3;
   if (ratio > 0.2) return 2;
@@ -334,6 +368,16 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 15000);
 
+// Chave de dia no fuso LOCAL, nao UTC - tem que bater com localDateKey()
+// de usage.js (mesmo fuso, mesmo criterio de "dia"), senao o rotulo
+// aqui nao acha os tokens que o main process guardou sob outra chave.
+function localDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function renderHeatmap(dailyLast30) {
   heatmapEl.innerHTML = '';
   const days = [];
@@ -341,7 +385,7 @@ function renderHeatmap(dailyLast30) {
   for (let i = 29; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(localDateKey(d));
   }
   const max = Math.max(1, ...Object.values(dailyLast30));
   let total = 0;
@@ -352,7 +396,7 @@ function renderHeatmap(dailyLast30) {
     bar.className = 'bar';
     bar.title = `${day}: ${formatTokens(tokens)} tokens`;
     bar.dataset.level = String(levelFor(tokens, max));
-    const heightPct = tokens === 0 ? 6 : Math.max(10, Math.round((tokens / max) * 100));
+    const heightPct = tokens === 0 ? 6 : Math.max(10, Math.round((Math.sqrt(tokens) / Math.sqrt(max)) * 100));
     bar.style.height = `${heightPct}%`;
     heatmapEl.appendChild(bar);
   }
@@ -363,16 +407,17 @@ function renderCompactPct(ratio) {
   const pct = Math.round(ratio * 100);
   compactPctEl.textContent = `${pct}%`;
   compactPctEl.className = 'compact-pct';
-  compactDotEl.className = 'compact-dot';
+  compactBarFillEl.className = 'compact-bar-fill';
+  compactBarFillEl.style.width = `${Math.min(100, pct)}%`;
   // Faixas: 0-40 verde, 41-79 amarelo, 80-100+ vermelho.
   let glowColor = '#3ee673';
   if (pct >= 80) {
     compactPctEl.classList.add('danger');
-    compactDotEl.classList.add('danger');
+    compactBarFillEl.classList.add('danger');
     glowColor = '#ff4d3d';
   } else if (pct >= 41) {
     compactPctEl.classList.add('warn');
-    compactDotEl.classList.add('warn');
+    compactBarFillEl.classList.add('warn');
     glowColor = '#ffd23f';
   }
   sparkEl.style.setProperty('--glow-color', glowColor);
@@ -408,12 +453,10 @@ function render(snapshot) {
   const hasExtraUsage = !!(eu && eu.enabled);
   extraUsageSectionEl.classList.toggle('hidden', !hasExtraUsage);
   if (hasExtraUsage) {
-    extraUsageBadgeEl.textContent = eu.spendLimitReached ? 'limite atingido' : 'ativo';
-    extraUsageBadgeEl.classList.toggle('real', !eu.spendLimitReached);
-    extraUsageStatusEl.textContent = eu.spendLimitReached
-      ? 'Limite de gasto extra batido'
-      : 'Cobrindo alem do teto do plano';
-    extraUsageValueEl.textContent = `${formatMoney(eu.usedAmount, eu.currency)} usados`;
+    extraUsageDotEl.classList.toggle('danger', !!eu.spendLimitReached);
+    extraUsageValueEl.classList.toggle('danger', !!eu.spendLimitReached);
+    extraUsageValueEl.textContent = formatMoney(eu.usedAmount, eu.currency);
+    extraUsageValueEl.title = eu.spendLimitReached ? 'Limite de gasto extra batido' : 'Cobrindo alem do teto do plano';
   }
 
   renderModelBreakdown(weeklyByModel);
@@ -492,14 +535,17 @@ spendCloseBtn.addEventListener('click', () => {
   spendPanelEl.classList.add('hidden');
 });
 
-spendClearBtn.addEventListener('click', () => {
-  window.capyApi.copyClearHint();
+spendClearBtn.addEventListener('click', async () => {
   const original = spendClearBtn.textContent;
-  spendClearBtn.textContent = 'Copiado! Cole "/clear" no terminal';
+  spendClearBtn.disabled = true;
+  spendClearBtn.textContent = 'Abrindo terminal...';
+  const result = await window.capyApi.openContinueTerminal();
+  spendClearBtn.disabled = false;
+  spendClearBtn.textContent = result.ok ? 'Aberto! Cole "/compact" la pra economizar' : `Erro: ${result.error}`;
   setTimeout(() => {
     spendClearBtn.textContent = original;
-    spendPanelEl.classList.add('hidden');
-  }, 1600);
+    if (result.ok) spendPanelEl.classList.add('hidden');
+  }, 2600);
 });
 
 exportBtn.addEventListener('click', () => {
@@ -541,12 +587,15 @@ window.capyApi.onAuthResult((result) => {
   }
 });
 
-minimizeBtn.addEventListener('click', () => {
-  isCompact = !isCompact;
+function setCompactMode(next) {
+  isCompact = next;
   document.body.classList.toggle('compact', isCompact);
   minimizeBtn.title = isCompact ? 'Restaurar' : 'Modo compacto';
   window.capyApi.setCompact(isCompact);
-});
+}
+
+minimizeBtn.addEventListener('click', () => setCompactMode(!isCompact));
+compactExpandBtn.addEventListener('click', () => setCompactMode(false));
 
 settingsBtn.addEventListener('click', () => {
   settingsPanel.classList.toggle('hidden');

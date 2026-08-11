@@ -9,7 +9,13 @@
   <div class="titlebar">
     <div class="titlebar-brand">
       <span class="brand-icon"></span>
-      <span>Spark Monitor</span>
+      <div class="titlebar-brand-text">
+        <span class="titlebar-title">Spark Monitor</span>
+        <span id="titlebarEmail" class="titlebar-email hidden">
+          <span class="live-dot"></span>
+          <span id="titlebarEmailText"></span>
+        </span>
+      </div>
     </div>
     <div class="titlebar-actions">
       <button id="settingsBtn" title="Configuracoes">&#x2699;</button>
@@ -28,12 +34,15 @@
         <input id="codeInput" class="code-input" type="text" placeholder="cole o codigo#state aqui" />
         <button id="submitCodeBtn" class="account-btn">Confirmar</button>
       </div>
-      <div id="accountConnected" class="account-row hidden">
-        <span class="account-connected-label">
-          <span class="live-dot"></span>
-          <span id="accountLabel">conectado</span>
-        </span>
-        <button id="logoutBtn" class="account-btn outline">Desconectar</button>
+      <div id="accountConnected" class="hidden">
+        <button id="logoutBtn" class="settings-logout-btn">
+          <svg class="settings-logout-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Desconectar conta</span>
+        </button>
       </div>
       <div id="accountError" class="account-error hidden"></div>
     </div>
@@ -99,7 +108,7 @@
     <div id="spendOffendersLabel" class="spend-offenders-label hidden">Maiores consumidores</div>
     <div id="spendOffenders" class="spend-offenders"></div>
 
-    <button id="spendClearBtn" class="btn-primary">Iniciar conversa nova</button>
+    <button id="spendClearBtn" class="btn-primary">Retomar em terminal novo</button>
   </div>
 
   <div class="scene" id="scene">
@@ -118,6 +127,7 @@
     <span class="star s5"></span>
     <span class="star s6"></span>
 
+    <div class="spark-scale-wrap">
     <div id="spark" class="spark idle">
       <div class="mascot-grid">
         <div class="mp mp-body" style="grid-row:1;grid-column:4;"></div>
@@ -262,19 +272,28 @@
         <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
+    </div>
     <div class="spark-footer">
       <div class="spark-status">
         <span id="statusDot" class="status-dot"></span>
         <span id="sparkStatus">tranquilo</span>
       </div>
       <div class="compact-pct-row">
-        <span id="compactDot" class="compact-dot"></span>
         <span id="compactPct" class="compact-pct">0%</span>
+        <span class="compact-meta-label">tokens &middot; sessao</span>
       </div>
+    </div>
+    <div class="compact-actions">
+      <button id="compactExpandBtn" class="compact-icon-btn compact-expand-btn" title="Restaurar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+    <div class="compact-bar-track">
+      <div id="compactBarFill" class="compact-bar-fill"></div>
     </div>
   </div>
 
-  <div class="metric-card">
+  <div class="metric-row">
     <div class="metric-top">
       <div class="metric-name">
         <span>Sessao (5h)</span>
@@ -288,7 +307,7 @@
     </div>
   </div>
 
-  <div class="metric-card">
+  <div class="metric-row">
     <div class="metric-top">
       <div class="metric-name">
         <span>Hoje</span>
@@ -302,7 +321,7 @@
     </div>
   </div>
 
-  <div class="metric-card">
+  <div class="metric-row">
     <div class="metric-top">
       <div class="metric-name">
         <span>Semana</span>
@@ -341,17 +360,13 @@
   </div>
 
   <div class="section hidden" id="extraUsageSection">
-    <div class="label-row">
-      <span>Credito extra <span class="label-sub">(pay-per-use)</span></span>
-      <span id="extraUsageBadge" class="badge"></span>
-    </div>
-    <div class="metric-card">
-      <div class="metric-top">
-        <div class="metric-name"><span id="extraUsageStatus">-</span></div>
+    <div id="extraUsageRow" class="extra-credit-row">
+      <div class="extra-credit-left">
+        <span id="extraUsageDot" class="extra-credit-dot"></span>
+        <span class="extra-credit-label">Credito extra</span>
+        <span class="extra-credit-sub">pay-per-use</span>
       </div>
-      <div class="metric-bottom">
-        <span id="extraUsageValue" class="metric-value">-</span>
-      </div>
+      <span id="extraUsageValue" class="extra-credit-value">-</span>
     </div>
   </div>
 
