@@ -31,6 +31,14 @@ const SPEND_ALERT_COLD_GAP_MS = 10 * 60 * 1000;
 // cache foram leituras — ver getCacheEfficiency() em usage.js.
 const CACHE_WASTE_MIN_TOKENS = 20000;
 const CACHE_WASTE_HIT_RATIO = 0.5;
+// "Sessao god": custo real minimo na janela pra nao falsear em sessao
+// pequena (readSharePct sozinho e' instavel com poucos tokens), minimo de
+// chamadas de leitura pra contar como "repetido" (nao um Read grande
+// isolado) e fatia minima do custo real vindo de releitura — ver
+// getReadDominance() em usage.js.
+const GOD_SESSION_MIN_TOKENS = 300000;
+const GOD_SESSION_MIN_READS = 6;
+const GOD_SESSION_READ_SHARE = 0.4;
 
 const FULL_SIZE = { width: 320, height: 648 };
 const COMPACT_SIZE = { width: 210, height: 68 };
@@ -274,6 +282,19 @@ function buildSnapshot() {
   // sem bater com nada visivel na tela (mesma classe de confusao que o
   // dailyAlert ja evitou de proposito, ver comentario abaixo).
   snap.spendAlert = snap.ratios.session >= 0.9;
+
+  // "Sessao god": diferente de spendAlert (que so olha % do teto), esse
+  // acende mesmo com uso total baixo se a MAIORIA do custo real da janela
+  // ja' e' releitura repetida (Read/Glob/Grep) — o padrao do guia P0 que
+  // infla custo super-linearmente. Ver GOD_SESSION_* acima e
+  // getReadDominance() em usage.js.
+  const readDominance = usage.getReadDominance();
+  snap.readDominance = readDominance;
+  snap.godSession = !!(
+    readDominance.totalTokens >= GOD_SESSION_MIN_TOKENS &&
+    readDominance.readCount >= GOD_SESSION_MIN_READS &&
+    readDominance.readSharePct >= GOD_SESSION_READ_SHARE
+  );
 
   return snap;
 }
