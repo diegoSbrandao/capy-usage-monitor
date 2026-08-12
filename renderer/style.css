@@ -1236,14 +1236,16 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
-/* Destaque por faixa (Sessao/Hoje/Semana/Mes) - mesma escala de cor da
-   bar-fill, aplicada no texto do valor, referencia no design. */
-.metric-value.l1 { color: #8fe89a; font-weight: 700; }
-.metric-value.l2 { color: #3ee673; font-weight: 700; }
-.metric-value.l3 { color: #e8d24a; font-weight: 700; }
-.metric-value.l4 { color: #f0a83a; font-weight: 700; }
-.metric-value.l5 { color: #e0583a; font-weight: 700; }
-.metric-value.l6 { color: #ff4d3d; font-weight: 700; }
+/* Destaque so na porcentagem de verdade (Sessao/Semana/Sonnet/Opus) -
+   Hoje/Mes mostram tokens, nao percentual, entao ficam de fora (ver
+   renderSpentOnly). Mesma escala de cor da bar-fill, letra um pouco
+   maior que o resto do metric-value pra dar destaque sem destoar. */
+.metric-value.l1 { color: #8fe89a; font-weight: 700; font-size: 12.5px; }
+.metric-value.l2 { color: #3ee673; font-weight: 700; font-size: 12.5px; }
+.metric-value.l3 { color: #e8d24a; font-weight: 700; font-size: 12.5px; }
+.metric-value.l4 { color: #f0a83a; font-weight: 700; font-size: 12.5px; }
+.metric-value.l5 { color: #e0583a; font-weight: 700; font-size: 12.5px; }
+.metric-value.l6 { color: #ff4d3d; font-weight: 700; font-size: 12.5px; }
 
 .bar-track {
   flex: 1;

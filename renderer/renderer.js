@@ -266,7 +266,7 @@ function renderSpentOnly(m, used, ratio) {
   m.fill.style.width = `${pct}%`;
   m.fill.className = 'bar-fill accent';
   m.subtext.textContent = '';
-  m.value.className = `metric-value ${tierFor(ratio)}`;
+  m.value.className = 'metric-value';
   m.value.textContent = `${formatTokens(used)} tokens`;
 }
 
