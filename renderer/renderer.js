@@ -33,6 +33,11 @@ const metrics = {
     value: document.getElementById('dailyValue'),
     fill: document.getElementById('dailyBar'),
   },
+  monthly: {
+    subtext: document.getElementById('monthlySubtext'),
+    value: document.getElementById('monthlyValue'),
+    fill: document.getElementById('monthlyBar'),
+  },
   weekly: {
     subtext: document.getElementById('weeklySubtext'),
     value: document.getElementById('weeklyValue'),
@@ -445,6 +450,7 @@ function render(snapshot) {
 
   renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
+  renderSpentOnly(metrics.monthly, snapshot.monthlyTokens, ratios.monthly);
   renderMetric(metrics.weekly, snapshot.weeklyTokens, limits.weekly, ratios.weekly, real.week, true);
   setBadge(metrics.session.badge, !!real.session);
   setBadge(metrics.weekly.badge, !!real.week);

@@ -336,6 +336,20 @@
     </div>
   </div>
 
+  <div class="metric-row">
+    <div class="metric-top">
+      <div class="metric-name">
+        <span>Mes</span>
+        <span class="badge badge-personal" title="Nao existe limite mensal oficial da Anthropic. Isso e so um teto pessoal configuravel em config.json (monthlyLimitTokens), pra voce acompanhar seu proprio ritmo.">teto pessoal</span>
+      </div>
+      <span id="monthlySubtext" class="metric-subtext"></span>
+    </div>
+    <div class="metric-bottom">
+      <div class="bar-track"><div id="monthlyBar" class="bar-fill"></div></div>
+      <span id="monthlyValue" class="metric-value">-</span>
+    </div>
+  </div>
+
   <div class="section hidden" id="perModelSection">
     <div class="label-row"><span>Limite por modelo <span class="label-sub">(oficial, semana)</span></span></div>
     <div class="metric-card hidden" id="sonnetCard">

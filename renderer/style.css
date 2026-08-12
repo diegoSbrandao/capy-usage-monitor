@@ -1271,12 +1271,14 @@ body {
   background: linear-gradient(90deg, oklch(0.72 0.15 45), oklch(0.6 0.17 32));
 }
 
+/* Flat, sem caixa/borda - mesmo tratamento do .metric-row, pra ficar
+   harmonico com Sessao/Hoje/Semana/Mes acima (referencia no design). */
 .section {
-  margin: 8px 14px 0;
-  padding: 13px 14px;
-  background: oklch(0.17 0.008 260);
-  border: 1px solid oklch(0.26 0.008 260);
-  border-radius: 10px;
+  margin: 14px 14px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
 }
 .section:last-child { margin-bottom: 14px; }
 .section:has(.model-list) { margin-bottom: 6px; }
