@@ -41,7 +41,7 @@ const HARDCODED_FALLBACK_CONFIG = {
   weeklyLimitTokens: 40000000,
   monthlyLimitTokens: 150000000,
   activityThresholdsMs: { working: 90000, coffeeAfter: 300000, sleepAfter: 600000 },
-  pollIntervalMs: 15000,
+  pollIntervalMs: 500,
   notifyThresholds: [0.75, 0.9, 1.0],
   startInTray: false,
 };
@@ -634,6 +634,23 @@ app.whenReady().then(() => {
   pushSnapshot();
   pollTimer = setInterval(pushSnapshot, config.pollIntervalMs);
   if (auth.isConnected()) pollUsage();
+
+  // Watcher dedicado pro attention.json, separado do poll pesado acima.
+  // buildSnapshot() le todos os .jsonl de sessao do disco (caro, cresce com
+  // o historico) — rodar isso a cada mudanca do sinal de attention seria
+  // pesado demais. Aqui so checamos a existencia do arquivo (fs.existsSync,
+  // praticamente gratis) e mandamos um IPC leve que so alterna o badge no
+  // renderer, sem re-renderizar o resto do snapshot.
+  let attentionDebounce;
+  fs.watch(DATA_DIR, (eventType, filename) => {
+    if (filename !== 'attention.json') return;
+    clearTimeout(attentionDebounce);
+    attentionDebounce = setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('attention:update', fs.existsSync(ATTENTION_PATH));
+      }
+    }, 15);
+  });
 });
 
 app.on('window-all-closed', () => {

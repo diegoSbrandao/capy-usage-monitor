@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('capyApi', {
   onUpdate: (callback) => {
     ipcRenderer.on('usage:update', (_event, snapshot) => callback(snapshot));
   },
+  onAttentionUpdate: (callback) => {
+    ipcRenderer.on('attention:update', (_event, active) => callback(active));
+  },
 
   authStart: () => ipcRenderer.send('auth-start'),
   authSubmitCode: (code) => ipcRenderer.send('auth-code', code),

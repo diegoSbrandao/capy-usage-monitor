@@ -1186,6 +1186,7 @@ body.compact { overflow: hidden; }
   border-radius: 10px;
 }
 .section:last-child { margin-bottom: 14px; }
+.section:has(.model-list) { margin-bottom: 6px; }
 
 .label-row {
   display: flex;
@@ -1201,7 +1202,7 @@ body.compact { overflow: hidden; }
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
 }
 .model-row-top {
   display: flex;

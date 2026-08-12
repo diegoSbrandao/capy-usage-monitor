@@ -274,8 +274,13 @@ function renderModelBreakdown(byModel) {
     modelBreakdownEl.innerHTML = '<div class="model-row-top"><span>sem dados</span></div>';
     return;
   }
-  const max = Math.max(1, ...entries.map(([, tokens]) => tokens));
-  for (const [model, tokens] of entries) {
+  const filteredEntries = entries.filter(([, tokens]) => tokens > 0);
+  if (filteredEntries.length === 0) {
+    modelBreakdownEl.innerHTML = '<div class="model-row-top"><span>sem dados</span></div>';
+    return;
+  }
+  const max = Math.max(1, ...filteredEntries.map(([, tokens]) => tokens));
+  for (const [model, tokens] of filteredEntries) {
     const row = document.createElement('div');
     row.className = 'model-row';
     const pct = Math.max(2, Math.round((tokens / max) * 100));
@@ -478,6 +483,33 @@ function render(snapshot) {
 
 window.capyApi.onUpdate(render);
 window.capyApi.requestSnapshot().then(render);
+
+// Reage a mudanca de attention.json na hora, sem esperar o proximo poll
+// pesado (que le todo o historico de sessao do disco). So alterna o badge
+// e a linha de status, reaproveitando o resto do ultimo snapshot renderizado.
+function applyAttention(active) {
+  if (!lastSnapshot) return;
+  lastSnapshot.attention = active;
+  sparkEl.classList.toggle('attention', active);
+  const { dailyAlert, cacheWaste, activityState } = lastSnapshot;
+  sparkStatusEl.textContent = active
+    ? ATTENTION_MESSAGE
+    : currentTransient === 'celebrating'
+      ? RESET_MESSAGE
+      : dailyAlert
+        ? FLAG_MESSAGE
+        : cacheWaste
+          ? CACHE_WASTE_MESSAGE
+          : (STATUS_LABEL[activityState] || activityState);
+  statusDotEl.style.background = active
+    ? 'oklch(0.75 0.15 85)'
+    : dailyAlert
+      ? STATUS_DOT_COLOR.alert
+      : cacheWaste
+        ? 'oklch(0.7 0.12 220)'
+        : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
+}
+window.capyApi.onAttentionUpdate(applyAttention);
 
 sparkEl.addEventListener('click', () => {
   addTransient('poked', 400);
