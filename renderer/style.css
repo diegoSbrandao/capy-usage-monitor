@@ -343,17 +343,70 @@ body {
   transition: background 1.2s ease;
 }
 
-.scene[data-period="night"] {
-  background: linear-gradient(180deg, oklch(0.1 0.02 265), oklch(0.16 0.03 260));
+.scene[data-period="madrugada"] {
+  background: linear-gradient(180deg, oklch(0.09 0.015 265), oklch(0.14 0.02 262));
+  --hill-color: oklch(0.07 0.015 265);
 }
-.scene[data-period="morning"] {
-  background: linear-gradient(180deg, oklch(0.32 0.07 40), oklch(0.5 0.09 65));
+.scene[data-period="manha"] {
+  background: linear-gradient(180deg, oklch(0.78 0.06 75), oklch(0.55 0.09 50));
+  --hill-color: oklch(0.32 0.06 50);
 }
-.scene[data-period="day"] {
-  background: linear-gradient(180deg, oklch(0.62 0.09 230), oklch(0.78 0.06 210));
+.scene[data-period="meiodia"] {
+  background: linear-gradient(180deg, oklch(0.68 0.11 232), oklch(0.74 0.09 210));
+  --hill-color: oklch(0.42 0.08 185);
 }
-.scene[data-period="evening"] {
-  background: linear-gradient(180deg, oklch(0.42 0.1 40), oklch(0.28 0.07 25));
+.scene[data-period="tarde"] {
+  background: linear-gradient(180deg, oklch(0.4 0.1 30), oklch(0.28 0.1 20));
+  --hill-color: oklch(0.22 0.06 25);
+}
+.scene[data-period="noite"] {
+  background: linear-gradient(180deg, oklch(0.13 0.025 260), oklch(0.19 0.035 258));
+  --hill-color: oklch(0.1 0.02 260);
+}
+
+/* Morros no rodape da cena - forma simples (retangulo bem largo com
+   border-radius em cima), estatico, so' a cor muda por periodo/clima. */
+.hills {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  bottom: -14px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--hill-color, oklch(0.2 0.02 260));
+  opacity: 0.9;
+}
+
+/* Chuva: camada independente do horario (fica por cima de qualquer
+   periodo) - overcast cinza-azulado, sem sol/lua, riscos de chuva
+   estaticos via repeating-linear-gradient (sem animacao, pedido
+   explicito do usuario). */
+.scene[data-weather="rain"] {
+  background: linear-gradient(180deg, oklch(0.32 0.02 250), oklch(0.24 0.02 255)) !important;
+  --hill-color: oklch(0.19 0.015 255);
+}
+.scene[data-weather="rain"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    100deg,
+    transparent 0 5px,
+    oklch(0.9 0.02 250 / 0.4) 5px 6.5px,
+    transparent 6.5px 13px
+  );
+  pointer-events: none;
+}
+.scene[data-weather="rain"] .sun,
+.scene[data-weather="rain"] .moon,
+.scene[data-weather="rain"] .star { display: none; }
+.scene[data-weather="rain"] .cloud {
+  width: 30px;
+  height: 9px;
+  border-radius: 99px;
+  background: oklch(0.55 0.015 255);
+  box-shadow: none;
+  opacity: 0.9;
 }
 
 .clock-chip {
@@ -383,13 +436,13 @@ body {
   color: oklch(0.9 0.006 260);
   letter-spacing: 0.02em;
 }
-.scene[data-period="day"] .clock-chip,
-.scene[data-period="morning"] .clock-chip {
+.scene[data-period="meiodia"] .clock-chip,
+.scene[data-period="manha"] .clock-chip {
   background: oklch(0.96 0.01 90 / 0.55);
   border-color: oklch(0.4 0.02 90 / 0.3);
 }
-.scene[data-period="day"] .clock-chip span:last-child,
-.scene[data-period="morning"] .clock-chip span:last-child {
+.scene[data-period="meiodia"] .clock-chip span:last-child,
+.scene[data-period="manha"] .clock-chip span:last-child {
   color: oklch(0.22 0.02 90);
 }
 
@@ -404,16 +457,14 @@ body {
   box-shadow: 0 0 0 4px oklch(0.9 0.16 90 / 0.3), 0 0 18px 4px oklch(0.9 0.16 90 / 0.5);
   display: none;
 }
-.scene[data-period="day"] .sun { display: block; }
-.scene[data-period="morning"] .sun {
+.scene[data-period="meiodia"] .sun { display: block; }
+.scene[data-period="manha"] .sun {
   display: block;
-  top: 26px;
   background: oklch(0.85 0.14 70);
   box-shadow: 0 0 0 4px oklch(0.8 0.15 65 / 0.3), 0 0 20px 4px oklch(0.8 0.15 65 / 0.5);
 }
-.scene[data-period="evening"] .sun {
+.scene[data-period="tarde"] .sun {
   display: block;
-  top: 30px;
   background: oklch(0.78 0.17 45);
   box-shadow: 0 0 0 4px oklch(0.7 0.18 40 / 0.3), 0 0 22px 4px oklch(0.7 0.18 40 / 0.55);
 }
@@ -433,7 +484,8 @@ body {
   box-shadow: 0 0 14px 3px oklch(0.9 0.01 260 / 0.4);
   display: none;
 }
-.scene[data-period="night"] .moon { display: block; }
+.scene[data-period="noite"] .moon,
+.scene[data-period="madrugada"] .moon { display: block; }
 
 .cloud {
   position: absolute;
@@ -454,13 +506,13 @@ body {
   50% { transform: translateX(14px); }
   100% { transform: translateX(0); }
 }
-.scene[data-period="day"] .cloud {
+.scene[data-period="meiodia"] .cloud {
   background: oklch(0.98 0.005 260);
   box-shadow: 6px -6px 0 0 oklch(0.98 0.005 260), -6px 0 0 0 oklch(0.98 0.005 260), 12px 0 0 0 oklch(0.98 0.005 260);
   opacity: 0.9;
 }
-.scene[data-period="morning"] .cloud,
-.scene[data-period="evening"] .cloud {
+.scene[data-period="manha"] .cloud,
+.scene[data-period="tarde"] .cloud {
   background: oklch(0.85 0.06 60);
   box-shadow: 6px -6px 0 0 oklch(0.85 0.06 60), -6px 0 0 0 oklch(0.85 0.06 60), 12px 0 0 0 oklch(0.85 0.06 60);
   opacity: 0.85;
@@ -484,9 +536,9 @@ body {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.9; }
 }
-.scene[data-period="day"] .star,
-.scene[data-period="morning"] .star,
-.scene[data-period="evening"] .star { display: none; }
+.scene[data-period="meiodia"] .star,
+.scene[data-period="manha"] .star,
+.scene[data-period="tarde"] .star { display: none; }
 
 .spark-footer {
   display: flex;
@@ -510,8 +562,8 @@ body {
   background: oklch(0.55 0.01 260);
   transition: background 0.3s ease;
 }
-.scene[data-period="day"] .spark-status,
-.scene[data-period="morning"] .spark-status { color: oklch(0.22 0.02 90); }
+.scene[data-period="meiodia"] .spark-status,
+.scene[data-period="manha"] .spark-status { color: oklch(0.22 0.02 90); }
 
 .compact-pct {
   display: none;
@@ -1354,7 +1406,9 @@ body.compact .clock-chip,
 body.compact .sun,
 body.compact .moon,
 body.compact .cloud,
-body.compact .star { display: none !important; }
+body.compact .star,
+body.compact .hills { display: none !important; }
+body.compact .scene::after { content: none; }
 body.compact .scene {
   flex-direction: row;
   align-items: center;

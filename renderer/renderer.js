@@ -356,11 +356,21 @@ function levelFor(tokens, max) {
 }
 
 function periodForHour(h) {
-  if (h >= 6 && h < 10) return 'morning';
-  if (h >= 10 && h < 16) return 'day';
-  if (h >= 16 && h < 19) return 'evening';
-  return 'night';
+  if (h < 6) return 'madrugada';
+  if (h < 10) return 'manha';
+  if (h < 16) return 'meiodia';
+  if (h < 19) return 'tarde';
+  return 'noite';
 }
+
+// Chuva e' independente do horario (camada extra por cima do periodo do
+// dia, igual no design de referencia) - sem API de clima, so' sorteia
+// uma chance pequena de vez em quando, por variedade visual. Reroll a
+// cada 3h pra nao ficar travado num estado o dia inteiro.
+const RAIN_CHANCE = 0.15;
+const RAIN_REROLL_MS = 3 * 60 * 60 * 1000;
+let isRaining = Math.random() < RAIN_CHANCE;
+setInterval(() => { isRaining = Math.random() < RAIN_CHANCE; }, RAIN_REROLL_MS);
 
 function updateClock() {
   const now = new Date();
@@ -368,6 +378,7 @@ function updateClock() {
   const mm = String(now.getMinutes()).padStart(2, '0');
   clockEl.textContent = `${hh}:${mm}`;
   sceneEl.dataset.period = periodForHour(now.getHours());
+  sceneEl.dataset.weather = isRaining ? 'rain' : 'clear';
 }
 
 updateClock();
