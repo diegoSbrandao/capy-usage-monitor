@@ -99,6 +99,7 @@ const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 const ATTENTION_MESSAGE = 'Terminal te chamando, da uma olhada!';
 const RESET_MESSAGE = 'Prontos de novo!';
 const CACHE_WASTE_MESSAGE = 'Cache pouco aproveitado, contexto repetindo sem reuso.';
+const GOD_SESSION_MESSAGE = 'Sessao god! Muita releitura acumulada, cada msg fica mais cara que a anterior.';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
@@ -448,7 +449,7 @@ function renderCompactPct(ratio) {
 
 function render(snapshot) {
   lastSnapshot = snapshot;
-  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset, spendAlert, cacheWaste } = snapshot;
+  const { currentSession, weeklyByModel, dailyLast30, limits, ratios, sevenDayMedianTokens, activityState, toolCategory, real, dailyAlert, attention, justReset, spendAlert, cacheWaste, godSession } = snapshot;
 
   renderMetric(metrics.session, currentSession.totalTokens, limits.session, ratios.session, real.session);
   renderSpentOnly(metrics.daily, snapshot.todayTokens, ratios.daily);
@@ -521,27 +522,33 @@ function render(snapshot) {
   sparkEl.classList.toggle('attention', !!attention);
   sparkEl.classList.toggle('spendAlert', !!spendAlert);
   sparkEl.classList.toggle('cache-warn', !!cacheWaste);
+  sparkEl.classList.toggle('god-session', !!godSession);
 
   // Prioridade: precisa de voce agora (terminal) > acabou de renovar >
-  // meta diaria > cache desperdicado (o mais soft dos tres, so
-  // informativo) > estado normal. Reset so aparece durante a propria
-  // janela transiente de `.celebrating` (nao fica preso na tela).
+  // meta diaria (intencao explicita do usuario) > sessao god (releitura
+  // dominando o custo, mesmo cedo) > cache desperdicado (mais soft dos
+  // quatro, so informativo) > estado normal. Reset so aparece durante a
+  // propria janela transiente de `.celebrating` (nao fica preso na tela).
   sparkStatusEl.textContent = attention
     ? ATTENTION_MESSAGE
     : currentTransient === 'celebrating'
       ? RESET_MESSAGE
       : dailyAlert
         ? FLAG_MESSAGE
-        : cacheWaste
-          ? CACHE_WASTE_MESSAGE
-          : (STATUS_LABEL[activityState] || activityState);
+        : godSession
+          ? GOD_SESSION_MESSAGE
+          : cacheWaste
+            ? CACHE_WASTE_MESSAGE
+            : (STATUS_LABEL[activityState] || activityState);
   statusDotEl.style.background = attention
     ? 'oklch(0.75 0.15 85)'
     : dailyAlert
       ? STATUS_DOT_COLOR.alert
-      : cacheWaste
-        ? 'oklch(0.7 0.12 220)'
-        : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
+      : godSession
+        ? 'oklch(0.65 0.19 300)'
+        : cacheWaste
+          ? 'oklch(0.7 0.12 220)'
+          : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
   renderCompactPct(ratios.session);
 }
 
@@ -555,23 +562,27 @@ function applyAttention(active) {
   if (!lastSnapshot) return;
   lastSnapshot.attention = active;
   sparkEl.classList.toggle('attention', active);
-  const { dailyAlert, cacheWaste, activityState } = lastSnapshot;
+  const { dailyAlert, cacheWaste, godSession, activityState } = lastSnapshot;
   sparkStatusEl.textContent = active
     ? ATTENTION_MESSAGE
     : currentTransient === 'celebrating'
       ? RESET_MESSAGE
       : dailyAlert
         ? FLAG_MESSAGE
-        : cacheWaste
-          ? CACHE_WASTE_MESSAGE
-          : (STATUS_LABEL[activityState] || activityState);
+        : godSession
+          ? GOD_SESSION_MESSAGE
+          : cacheWaste
+            ? CACHE_WASTE_MESSAGE
+            : (STATUS_LABEL[activityState] || activityState);
   statusDotEl.style.background = active
     ? 'oklch(0.75 0.15 85)'
     : dailyAlert
       ? STATUS_DOT_COLOR.alert
-      : cacheWaste
-        ? 'oklch(0.7 0.12 220)'
-        : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
+      : godSession
+        ? 'oklch(0.65 0.19 300)'
+        : cacheWaste
+          ? 'oklch(0.7 0.12 220)'
+          : (STATUS_DOT_COLOR[activityState] || STATUS_DOT_COLOR.idle);
 }
 window.capyApi.onAttentionUpdate(applyAttention);
 
