@@ -99,7 +99,11 @@ const FLAG_MESSAGE = 'Eita! Meta diaria batida, desacelera um pouco!';
 const ATTENTION_MESSAGE = 'Terminal te chamando, da uma olhada!';
 const RESET_MESSAGE = 'Prontos de novo!';
 const CACHE_WASTE_MESSAGE = 'Cache pouco aproveitado, contexto repetindo sem reuso.';
-const GOD_SESSION_MESSAGE = 'Sessao god! Muita releitura acumulada, cada msg fica mais cara que a anterior.';
+// Curto de proposito: a explicacao completa (por que, quanto, o que
+// fazer) fica no #spendPanel existente (clique no mascote ou no badge),
+// nao na linha de status — mesmo painel que ja atende spendAlert, com
+// seu proprio X de fechar (spendCloseBtn).
+const GOD_SESSION_MESSAGE = 'Sessao god! Clique pra ver.';
 
 const STATUS_LABEL = {
   working: 'trabalhando',
@@ -588,7 +592,10 @@ window.capyApi.onAttentionUpdate(applyAttention);
 
 sparkEl.addEventListener('click', () => {
   addTransient('poked', 400);
-  if (lastSnapshot && lastSnapshot.spendAlert) {
+  // godSession reaproveita o mesmo painel "por que essa sessao esta
+  // pesando" que ja atende spendAlert — texto curto no mascote, detalhe
+  // completo (media/mensagem, % relido, maiores consumidores) so' aqui.
+  if (lastSnapshot && (lastSnapshot.spendAlert || lastSnapshot.godSession)) {
     spendPanelEl.classList.remove('hidden');
     spendSubtitleEl.textContent = 'Analisando...';
     window.capyApi.analyzeSpend().then(renderSpendAnalysis);
