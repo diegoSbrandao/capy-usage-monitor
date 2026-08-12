@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const activity = require('./activity');
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
@@ -200,6 +201,77 @@ function getCacheEfficiency() {
   const total = cacheCreationTokens + cacheReadTokens;
   if (total === 0) return null;
   return { cacheCreationTokens, cacheReadTokens, hitRatio: cacheReadTokens / total };
+}
+
+// Deteccao de "sessao god": sessao dominada por releitura repetida de
+// arquivos/busca (Read/Glob/Grep) em vez de trabalho novo — o padrao
+// descrito no guia P0 que infla custo super-linearmente (M^1,46): cada
+// releitura reenvia conteudo que ja estava no contexto, sem fazer o
+// modelo avancar. Diferente de getCacheEfficiency() (que mede reuso de
+// CACHE: cache_read vs cache_creation), esse conta quantas vezes
+// ferramentas de leitura rodaram e quanto texto de retorno pesaram,
+// relativo ao custo REAL da janela (tokensForEntry) — por isso pode
+// acender cedo (ex. sessao ainda em 30% do teto) se a maior parte do
+// gasto ja' e' releitura, mesmo com uso total ainda baixo. approxTokens
+// de tool_result e' estimativa por tamanho de texto (chars/4), mesma
+// logica ja usada em analyzeSessionCost/getToolBreakdownAllTime.
+function getReadDominance(sinceMs) {
+  const windowMs = sinceMs == null ? FIVE_HOURS_MS : sinceMs;
+  const cutoff = Date.now() - windowMs;
+  let totalTokens = 0;
+  let readApproxTokens = 0;
+  let readCount = 0;
+
+  for (const file of listTranscriptFiles()) {
+    let raw;
+    try {
+      raw = fs.readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    const toolNameById = {};
+    const seenIds = new Set();
+
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      let obj;
+      try {
+        obj = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const ts = Date.parse(obj.timestamp);
+      if (Number.isNaN(ts) || ts < cutoff) continue;
+
+      if (obj.type === 'assistant' && obj.message && obj.message.usage) {
+        if (Array.isArray(obj.message.content)) {
+          for (const c of obj.message.content) {
+            if (c.type === 'tool_use' && c.id && c.name) toolNameById[c.id] = c.name;
+          }
+        }
+        const id = obj.message.id;
+        if (id && seenIds.has(id)) continue;
+        if (id) seenIds.add(id);
+        totalTokens += tokensForEntry(obj.message.usage);
+      } else if (obj.type === 'user' && obj.message && Array.isArray(obj.message.content)) {
+        for (const c of obj.message.content) {
+          if (c.type !== 'tool_result') continue;
+          const name = toolNameById[c.tool_use_id];
+          if (activity.categorizeTool(name) !== 'read') continue;
+          const text = typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '');
+          readApproxTokens += Math.round(text.length / 4);
+          readCount += 1;
+        }
+      }
+    }
+  }
+
+  return {
+    totalTokens,
+    readApproxTokens,
+    readCount,
+    readSharePct: totalTokens > 0 ? readApproxTokens / totalTokens : 0,
+  };
 }
 
 // Nome da ultima tool_use dentro da janela informada (default: 90s, mesma
@@ -514,6 +586,7 @@ module.exports = {
   tierForAvgTokensPerMessage,
   analyzeSessionCost,
   getCacheEfficiency,
+  getReadDominance,
   getToolBreakdownAllTime,
 };
 

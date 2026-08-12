@@ -25,3 +25,13 @@ neste projeto.
 
 Nunca commitar direto em `master` ou `develop`, e nunca dar push --force
 nelas.
+
+## Testar com evidencia ANTES de subir (push/PR)
+
+Depois de commitar numa feature branch, ANTES de dar push ou abrir PR:
+avisar o usuario que vai testar agora, subir o widget de verdade e
+mostrar/tirar print da acao ou melhoria nova pedida, funcionando. So
+depois disso (com a evidencia acompanhada pelo usuario) seguir pro
+push/PR. Nao pular essa etapa mesmo se `node --check`/testes unitarios
+isolados (`node usage.js`, `node activity.js`) ja passaram — isso valida
+sintaxe/logica isolada, nao substitui ver a feature rodando na tela.
