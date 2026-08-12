@@ -468,11 +468,13 @@ function render(snapshot) {
   if (hasSonnet) renderMetric(metrics.sonnet, 0, 0, real.sonnet.pct / 100, real.sonnet, true);
   if (hasOpus) renderMetric(metrics.opus, 0, 0, real.opus.pct / 100, real.opus, true);
 
-  // Credito avulso (pay-per-use): so aparece quando conectado e a conta
-  // tem essa opcao habilitada — e' o que explica continuar usando o
-  // Claude mesmo com Sessao (5h) em 100%.
+  // Credito avulso (pay-per-use): mostra sempre que ja teve gasto extra no
+  // periodo (usedAmount > 0), mesmo se `eu.enabled` vier false da API —
+  // esse campo reflete se o pay-per-use esta ligado AGORA pra futuros
+  // gastos, nao se ha historico pra mostrar (ex.: usuario desligou depois
+  // de estourar o limite, mas o gasto do periodo continua real e relevante).
   const eu = real.extraUsage;
-  const hasExtraUsage = !!(eu && eu.enabled);
+  const hasExtraUsage = !!(eu && eu.usedAmount > 0);
   extraUsageSectionEl.classList.toggle('hidden', !hasExtraUsage);
   if (hasExtraUsage) {
     extraUsageDotEl.classList.toggle('danger', !!eu.spendLimitReached);
