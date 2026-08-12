@@ -1236,6 +1236,14 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
+/* Destaque por faixa (Sessao/Hoje/Semana/Mes) - mesma escala de cor da
+   bar-fill, aplicada no texto do valor, referencia no design. */
+.metric-value.l1 { color: #8fe89a; font-weight: 700; }
+.metric-value.l2 { color: #3ee673; font-weight: 700; }
+.metric-value.l3 { color: #e8d24a; font-weight: 700; }
+.metric-value.l4 { color: #f0a83a; font-weight: 700; }
+.metric-value.l5 { color: #e0583a; font-weight: 700; }
+.metric-value.l6 { color: #ff4d3d; font-weight: 700; }
 
 .bar-track {
   flex: 1;

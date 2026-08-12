@@ -241,6 +241,7 @@ function setBarTier(fillEl, ratio) {
 
 function renderMetric(m, used, limit, ratio, realInfo, useDaysForReset) {
   setBarTier(m.fill, ratio);
+  m.value.className = `metric-value ${tierFor(ratio)}`;
   if (realInfo) {
     const resetTxt = useDaysForReset
       ? formatDurationDays(realInfo.resetMs)
@@ -265,6 +266,7 @@ function renderSpentOnly(m, used, ratio) {
   m.fill.style.width = `${pct}%`;
   m.fill.className = 'bar-fill accent';
   m.subtext.textContent = '';
+  m.value.className = `metric-value ${tierFor(ratio)}`;
   m.value.textContent = `${formatTokens(used)} tokens`;
 }
 
