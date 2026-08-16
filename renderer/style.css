@@ -592,6 +592,12 @@ body {
 }
 .scene[data-period="meiodia"] .spark-status,
 .scene[data-period="manha"] .spark-status { color: oklch(0.22 0.02 90); }
+/* !important necessario: mesma razao do sol/lua/estrela/nuvem no bloco
+   de chuva acima - as regras de periodo (manha/meiodia, ja escurecidas
+   pra ler no ceu claro) tem a mesma especificidade e vem antes no
+   arquivo, mas chuva sempre escurece o fundo por cima do periodo, entao
+   o texto precisa ficar claro de novo independente do periodo. */
+.scene[data-weather="rain"] .spark-status { color: oklch(0.97 0.01 250) !important; }
 
 .compact-pct {
   display: none;
