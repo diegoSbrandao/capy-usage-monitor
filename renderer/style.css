@@ -378,35 +378,63 @@ body {
 }
 
 /* Chuva: camada independente do horario (fica por cima de qualquer
-   periodo) - overcast cinza-azulado, sem sol/lua, riscos de chuva
-   estaticos via repeating-linear-gradient (sem animacao, pedido
-   explicito do usuario). */
+   periodo) - ceu escuro overcast, sem sol/lua, riscos de chuva
+   individuais (.raindrop) espalhados feito os .star, em vez de um
+   repeating-linear-gradient cobrindo a cena inteira (ficava com cara de
+   veneziana/listra, nao de chuva - trocado por pedido do usuario com
+   referencia em imagem propria, chuva.png). Cada gota cai em loop
+   (translateY + fade in/out) com duracao/delay proprios por gota pra nao
+   ficar um bloco uniforme descendo junto - pedido explicito do usuario
+   pra parecer mais chuva de verdade em vez de riscos parados. */
 .scene[data-weather="rain"] {
-  background: linear-gradient(180deg, oklch(0.32 0.02 250), oklch(0.24 0.02 255)) !important;
-  --hill-color: oklch(0.19 0.015 255);
+  background: linear-gradient(180deg, oklch(0.15 0.02 255), oklch(0.21 0.02 255)) !important;
+  --hill-color: oklch(0.13 0.015 255);
 }
-.scene[data-weather="rain"]::after {
-  content: "";
+@keyframes raindrop-fall {
+  0% { transform: translateY(-18px) rotate(12deg); opacity: 0; }
+  15% { opacity: 0.7; }
+  80% { opacity: 0.7; }
+  100% { transform: translateY(150px) rotate(12deg); opacity: 0; }
+}
+.raindrop {
   position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    100deg,
-    transparent 0 5px,
-    oklch(0.9 0.02 250 / 0.4) 5px 6.5px,
-    transparent 6.5px 13px
-  );
+  width: 2px;
+  height: 15px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, transparent, oklch(0.88 0.02 250 / 0.65));
+  display: none;
   pointer-events: none;
+  animation: raindrop-fall linear infinite;
 }
+.scene[data-weather="rain"] .raindrop { display: block; }
+.raindrop.d1 { top: -6px; left: 8%;  height: 13px; animation-duration: 0.85s; animation-delay: 0s; }
+.raindrop.d2 { top: -6px; left: 20%; height: 18px; animation-duration: 1.05s; animation-delay: 0.2s; }
+.raindrop.d3 { top: -6px; left: 33%; height: 12px; animation-duration: 0.75s; animation-delay: 0.45s; }
+.raindrop.d4 { top: -6px; left: 47%; height: 16px; animation-duration: 0.95s; animation-delay: 0.1s; }
+.raindrop.d5 { top: -6px; left: 58%; height: 14px; animation-duration: 1.15s; animation-delay: 0.6s; }
+.raindrop.d6 { top: -6px; left: 70%; height: 19px; animation-duration: 0.8s;  animation-delay: 0.3s; }
+.raindrop.d7 { top: -6px; left: 80%; height: 12px; animation-duration: 1.0s;  animation-delay: 0.75s; }
+.raindrop.d8 { top: -6px; left: 90%; height: 15px; animation-duration: 0.9s;  animation-delay: 0.5s; }
+.raindrop.d9 { top: -6px; left: 14%; height: 11px; animation-duration: 1.1s;  animation-delay: 0.35s; }
 .scene[data-weather="rain"] .sun,
 .scene[data-weather="rain"] .moon,
-.scene[data-weather="rain"] .star { display: none; }
+.scene[data-weather="rain"] .star {
+  /* !important necessario: mesma especificidade das regras
+     [data-period="X"] .sun/.moon/.star (classe+atributo+classe), e essas
+     vem DEPOIS no arquivo (definidas por periodo do dia) - sem isso a
+     cascata deixa o sol/lua vazando por cima da chuva quando os dois
+     atributos coexistem no mesmo elemento. */
+  display: none !important;
+}
 .scene[data-weather="rain"] .cloud {
-  width: 30px;
-  height: 9px;
-  border-radius: 99px;
-  background: oklch(0.55 0.015 255);
-  box-shadow: none;
-  opacity: 0.9;
+  /* Mesma razao do !important em sun/moon/star acima: regras de nuvem
+     por periodo tem a mesma especificidade e vem depois no arquivo. */
+  width: 30px !important;
+  height: 9px !important;
+  border-radius: 99px !important;
+  background: oklch(0.55 0.015 255) !important;
+  box-shadow: none !important;
+  opacity: 0.9 !important;
 }
 
 .clock-chip {
@@ -1459,6 +1487,7 @@ body.compact .sun,
 body.compact .moon,
 body.compact .cloud,
 body.compact .star,
+body.compact .raindrop,
 body.compact .hills { display: none !important; }
 body.compact .scene::after { content: none; }
 body.compact .scene {
