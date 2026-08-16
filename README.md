@@ -1,13 +1,56 @@
-# Spark Monitor
+# ✨ Spark Monitor
 
-Widget de desktop (Windows) que mostra o consumo de tokens do **Claude
-Code** em tempo real, com uma criatura pixel simples num cenário escuro
-com nuvens e estrelas — visual inspirado nos gifs de demonstração do
-claude-usage-monitor, mas desenhado do zero em CSS (nenhum frame/imagem
-de terceiro usado).
+**Um widget de desktop pra Windows que transforma o consumo de tokens do
+[Claude Code](https://claude.com/claude-code) numa cena viva** — céu que
+muda com o horário real, clima que às vezes chove, e uma criatura pixel
+que reage ao que você está fazendo no terminal. Tudo desenhado do zero em
+CSS puro, sem gif nem imagem de terceiro.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-4c9a5a?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square)](#como-rodar)
+[![Electron](https://img.shields.io/badge/Electron-43-47848F?style=flat-square)](package.json)
+[![Feito com](https://img.shields.io/badge/feito%20com-Claude%20Code-D97757?style=flat-square)](https://claude.com/claude-code)
 
 Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-monitor)
-(Clauddy) e [Claude-Glass](https://github.com/vitoriahellen/Claude-Glass).
+(Clauddy, macOS) e [Claude-Glass](https://github.com/vitoriahellen/Claude-Glass)
+(Windows) — dois widgets ótimos de pet + percentual de uso que já existiam
+quando esse projeto começou. O Spark Monitor pega a mesma ideia base e vai
+mais fundo: em vez de só um número, uma cena inteira que muda com o dia e
+com o que você está fazendo.
+
+<table align="center">
+<tr>
+<td align="center" width="50%">
+  <img src="assets/screenshots/day.png" width="280" alt="Spark Monitor durante o dia, céu azul com sol" />
+  <br /><sub><b>Dia</b> — céu, sol e nuvens de verdade</sub>
+</td>
+<td align="center" width="50%">
+  <img src="assets/screenshots/rain.png" width="280" alt="Spark Monitor com clima de chuva, pingos caindo em loop" />
+  <br /><sub><b>Chuva</b> — pingos individuais caindo em loop, aleatória</sub>
+</td>
+</tr>
+</table>
+
+## O que tem de diferente
+
+Comparado aos dois projetos que inspiraram esse (com base no que os
+próprios READMEs deles documentam — pode ser que tenham mais por baixo dos
+panos, isso aqui é só o que dá pra comparar de fora):
+
+| | **Spark Monitor** | Clauddy | Claude-Glass |
+|---|:---:|:---:|:---:|
+| Plataforma | Windows | macOS | Windows |
+| % real de sessão/semana (login opcional) | ✅ | ✅ | ✅ |
+| Cenário dia/tarde/noite com hora real | ✅ | — | — |
+| Clima (chuva animada, aleatória) | ✅ | — | — |
+| Card contextual por ferramenta (lendo / rodando / editando) | ✅ | — | — |
+| Aviso de "sessão god" (releitura repetida inflando custo) | ✅ | — | — |
+| Aviso de cache mal aproveitado | ✅ | — | — |
+| Aviso de "terminal te chamando" (hook `Notification`) | ✅ | — | — |
+| Meta diária configurável com bandeirinha | ✅ | — | — |
+| Exportação em Excel por sessão | ✅ | — | — |
+| Modo compacto (widget minúsculo de canto) | ✅ | — | — |
+| Mediana real de tokens/dia, só depois de 7 dias de histórico | ✅ | — | — |
 
 ## O que tem
 
@@ -32,7 +75,8 @@ Inspirado em [claude-usage-monitor](https://github.com/renatoaug/claude-usage-mo
 - **Poke**: clique no personagem por uma reação.
 - **Relógio e cenário dia/tarde/noite**: hora local real no canto, com
   céu, sol e nuvens mudando de cor conforme o horário (noite tem
-  estrelas e lua).
+  estrelas e lua) — e, de vez em quando, uma camada de chuva independente
+  do horário, com pingos individuais caindo em loop.
 - **Aviso de meta diária (engrenagem)**: ative e defina um percentual —
   ao bater a meta, o personagem levanta uma bandeirinha vermelha e o
   status vira uma mensagem de aviso.
@@ -148,6 +192,11 @@ próprio Claude Code (configurado em `~/.claude/settings.json`, fora deste
 repo) que roda `scripts/signal-attention.js` — esse script só grava um
 arquivinho com a hora em `~/.capy-usage-monitor/attention.json`; o Spark
 Monitor lê esse arquivo e decide sozinho quando o aviso deve sumir.
+
+A chuva é puro CSS: nove `.raindrop` espalhados pela cena, cada um caindo
+em loop (`translateY` + fade in/out) com sua própria duração e atraso, pra
+não ficar um bloco uniforme descendo junto. Sorteia uma chance pequena de
+chover a cada 3h — sem API de clima, só variedade visual.
 
 ## Licença
 
