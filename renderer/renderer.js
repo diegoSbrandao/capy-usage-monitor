@@ -296,6 +296,12 @@ function updateAccountUI(connected) {
         if (p && p.email) {
           titlebarEmailTextEl.textContent = p.email;
           titlebarEmailEl.classList.remove('hidden');
+        } else {
+          // Rede pode ainda estar subindo logo apos o boot do Windows (o
+          // app abre via Startup antes da rede estar 100% pronta) - se o
+          // fetch falhar (main.js engole o erro e retorna null), tenta de
+          // novo no proximo render em vez de desistir pro resto da sessao.
+          profileRequested = false;
         }
       });
     }
