@@ -653,7 +653,8 @@ window.capyApi.onAuthResult((result) => {
     codeInput.value = '';
     accountErrorEl.classList.add('hidden');
   } else {
-    accountErrorEl.textContent = result.error || 'falha ao conectar';
+    codeInput.value = '';
+    accountErrorEl.textContent = `${result.error || 'falha ao conectar'} — clique "Conectar conta" de novo pra gerar um codigo novo (o anterior ja foi usado e nao serve mais)`;
     accountErrorEl.classList.remove('hidden');
   }
 });
