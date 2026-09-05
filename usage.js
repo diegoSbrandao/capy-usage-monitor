@@ -90,7 +90,8 @@ function readEntries(sinceMs) {
 function getCurrentSessionUsage() {
   const entries = readEntries(FIVE_HOURS_MS);
   const total = entries.reduce((sum, e) => sum + e.tokens, 0);
-  return { totalTokens: total, entryCount: entries.length, windowHours: 5 };
+  const earliestMs = entries.length ? Math.min(...entries.map((e) => e.timestamp)) : null;
+  return { totalTokens: total, entryCount: entries.length, windowHours: 5, earliestMs };
 }
 
 function getWeeklyModelBreakdown() {
@@ -559,6 +560,20 @@ function getToolBreakdownAllTime() {
     .sort((a, b) => b.approxTokens - a.approxTokens);
 }
 
+// Mediana de tokens/mensagem entre sessoes (arquivos .jsonl) reais dos
+// ultimos 7 dias - linha de base pra detectar sessao "cara por mensagem"
+// (ver LONG_SESSION_* em main.js e no hook god-session-hook.js). Ignora
+// sessoes com menos de 3 mensagens (media instavel com poucos pontos).
+// Retorna null sem sessoes suficientes na janela - nao inventa numero.
+function getSessionBaselineMedian() {
+  const cutoff = Date.now() - SEVEN_DAYS_MS;
+  const sessions = getSessionHistory().filter((s) => s.endMs >= cutoff && s.entryCount >= 3);
+  if (sessions.length === 0) return null;
+  const values = sessions.map((s) => s.avgTokensPerMessage).sort((a, b) => a - b);
+  const mid = Math.floor(values.length / 2);
+  return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+}
+
 function getSnapshot() {
   const dailyLast30 = getThirtyDayHeatmap();
   const weeklyByModel = getWeeklyModelBreakdown();
@@ -583,11 +598,13 @@ module.exports = {
   getLastToolUse,
   getSessionHistory,
   getSevenDayMedian,
+  getSessionBaselineMedian,
   tierForAvgTokensPerMessage,
   analyzeSessionCost,
   getCacheEfficiency,
   getReadDominance,
   getToolBreakdownAllTime,
+  parseSessionFile,
 };
 
 if (require.main === module) {

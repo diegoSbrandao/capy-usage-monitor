@@ -170,15 +170,15 @@ function renderSpendAnalysis(a) {
 
   let explainer;
   if (a.avgTier === 'bad' && topOffender) {
-    explainer = `${base} ${topOffender.name} sozinho ja consumiu ${formatTokens(topOffender.approxTokens)} tokens nessa janela — e o maior peso agora.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+    explainer = `${base} ${topOffender.name} sozinho ja consumiu ${formatTokens(topOffender.approxTokens)} tokens nessa janela — e o maior peso agora.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo. Pra tarefas grandes, usar subagentes ajuda a acelerar sem inflar o contexto principal.`;
   } else if (a.avgTier === 'bad') {
-    explainer = `${base} Media por mensagem esta na faixa mais alta do seu historico.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+    explainer = `${base} Media por mensagem esta na faixa mais alta do seu historico.${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo. Pra tarefas grandes, usar subagentes ajuda a acelerar sem inflar o contexto principal.`;
   } else if (a.avgTier === 'warn' && topOffender) {
     explainer = `${base} ${topOffender.name} e quem mais pesa por enquanto (${formatTokens(topOffender.approxTokens)} tokens).${sessionNote} De olho antes de crescer mais.`;
   } else if (cacheSharePct < 50 && a.totalTokens > 0) {
     explainer = `${base} Pouco cache reaproveitado ainda (${cacheSharePct}%) — cada resposta esta relendo bastante contexto do zero.${sessionNote}`;
   } else {
-    explainer = `${base}${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo.`;
+    explainer = `${base}${sessionNote} Abra um terminal novo com o contexto intacto e cole /compact pra reduzir o custo. Pra tarefas grandes, usar subagentes ajuda a acelerar sem inflar o contexto principal.`;
   }
   spendExplainerEl.textContent = explainer;
 
@@ -296,6 +296,12 @@ function updateAccountUI(connected) {
         if (p && p.email) {
           titlebarEmailTextEl.textContent = p.email;
           titlebarEmailEl.classList.remove('hidden');
+        } else {
+          // Rede pode ainda estar subindo logo apos o boot do Windows (o
+          // app abre via Startup antes da rede estar 100% pronta) - se o
+          // fetch falhar (main.js engole o erro e retorna null), tenta de
+          // novo no proximo render em vez de desistir pro resto da sessao.
+          profileRequested = false;
         }
       });
     }
