@@ -39,6 +39,23 @@ const CACHE_WASTE_HIT_RATIO = 0.5;
 const GOD_SESSION_MIN_TOKENS = 300000;
 const GOD_SESSION_MIN_READS = 6;
 const GOD_SESSION_READ_SHARE = 0.4;
+// "Sessao longa/cara" - trigger independente da releitura (GOD_SESSION_*
+// acima): dispara se a sessao atual (janela de 5h) ja tem mensagens/tempo
+// demais (extensa) OU se a media de tokens/mensagem ja passou muito da
+// mediana historica (cara por mensagem) - qualquer um dos dois basta.
+// GOD_SESSION_MIN_MESSAGES_FOR_COST evita julgar o gatilho de custo com
+// poucas mensagens (media instavel no inicio de qualquer sessao).
+const LONG_SESSION_MIN_MESSAGES = 40;
+const LONG_SESSION_MIN_DURATION_MS = 3 * 60 * 60 * 1000;
+const LONG_SESSION_MIN_MESSAGES_FOR_COST = 8;
+const LONG_SESSION_COST_MULTIPLIER = 1.8;
+const SESSION_BASELINE_PATH = path.join(DATA_DIR, 'session-baseline.json');
+const SESSION_BASELINE_REFRESH_MS = 10 * 60 * 1000;
+// Janelas do Windows cujo foco conta como "usuario voltou pro terminal" -
+// limpa o sinal de attention na hora, sem esperar o proximo hook do Claude
+// Code (ver startForegroundWatcher() abaixo). Nomes de processo em
+// minusculo (Get-Process retorna sem ".exe").
+const TERMINAL_PROCESS_NAMES = ['windowsterminal', 'cmd', 'powershell', 'pwsh', 'conhost', 'mintty', 'code'];
 
 const FULL_SIZE = { width: 320, height: 648 };
 const COMPACT_SIZE = { width: 210, height: 68 };
@@ -117,6 +134,60 @@ function isAttentionActive(lastActivityMs) {
   return true;
 }
 
+// Complemento de isAttentionActive(): sem isso, o unico jeito de limpar
+// o aviso de attention e' um hook do Claude Code disparar (proxima
+// mensagem/tool aprovada) - se o usuario so' clicar/focar o terminal sem
+// enviar nada ainda, o aviso continua piscando ate' os 5min expirarem.
+// Aqui a gente sobe UM processo PowerShell persistente (nao um por
+// segundo - custo de spawn seria alto) que fica escrevendo o nome do
+// processo da janela em foco a cada 1s via GetForegroundWindow/
+// GetWindowThreadProcessId (user32.dll). Quando esse processo bate com
+// TERMINAL_PROCESS_NAMES, apaga attention.json na hora - o fs.watch(DATA_DIR)
+// ja existente (ver app.whenReady abaixo) pega a mudanca e atualiza o
+// badge sozinho, sem precisar de nenhum caminho novo de IPC.
+let foregroundWatcherProc = null;
+function startForegroundWatcher() {
+  if (process.platform !== 'win32') return;
+  const script = [
+    'Add-Type -Name Win32Util -Namespace CapyMonitor -MemberDefinition \'',
+    '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();',
+    '[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);',
+    '\'',
+    'while ($true) {',
+    '  $hwnd = [CapyMonitor.Win32Util]::GetForegroundWindow()',
+    '  $procId = 0',
+    '  [void][CapyMonitor.Win32Util]::GetWindowThreadProcessId($hwnd, [ref]$procId)',
+    '  try { $name = (Get-Process -Id $procId -ErrorAction Stop).ProcessName } catch { $name = "" }',
+    '  Write-Output $name',
+    '  Start-Sleep -Milliseconds 1000',
+    '}',
+  ].join('\n');
+  try {
+    foregroundWatcherProc = spawn(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    let buf = '';
+    foregroundWatcherProc.stdout.on('data', (chunk) => {
+      buf += chunk.toString();
+      let idx;
+      while ((idx = buf.indexOf('\n')) !== -1) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (line && TERMINAL_PROCESS_NAMES.includes(line.toLowerCase())) {
+          try { fs.unlinkSync(ATTENTION_PATH); } catch {
+            // ja limpo ou nao existia - nada a fazer.
+          }
+        }
+      }
+    });
+    foregroundWatcherProc.on('error', () => { foregroundWatcherProc = null; });
+  } catch {
+    foregroundWatcherProc = null;
+  }
+}
+
 function persistSettingsToDisk() {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -137,6 +208,25 @@ function saveSettings(next) {
   };
   persistSettingsToDisk();
   return settings;
+}
+
+// Mediana de tokens/mensagem (getSessionBaselineMedian em usage.js) e'
+// cara de recalcular (escaneia todo o historico de sessoes) - separada do
+// poll pesado normal, atualizada so' a cada SESSION_BASELINE_REFRESH_MS.
+// Persistida em disco pra que god-session-hook.js (processo a parte,
+// rodado pelo hook global do Claude Code) leia sem ter que reimplementar o
+// calculo nem pagar esse custo a cada prompt do usuario.
+let cachedBaseline = null;
+function refreshSessionBaseline() {
+  try {
+    const medianAvgTokensPerMessage = usage.getSessionBaselineMedian();
+    cachedBaseline = { medianAvgTokensPerMessage, computedAt: Date.now() };
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(SESSION_BASELINE_PATH, JSON.stringify(cachedBaseline), 'utf8');
+  } catch {
+    // best-effort: sem baseline fresca, o hook cai so' no gatilho de
+    // tamanho/duracao (ver god-session-hook.js).
+  }
 }
 
 let config = loadConfig();
@@ -290,11 +380,29 @@ function buildSnapshot() {
   // getReadDominance() em usage.js.
   const readDominance = usage.getReadDominance();
   snap.readDominance = readDominance;
-  snap.godSession = !!(
+  const readDominanceTrigger = !!(
     readDominance.totalTokens >= GOD_SESSION_MIN_TOKENS &&
     readDominance.readCount >= GOD_SESSION_MIN_READS &&
     readDominance.readSharePct >= GOD_SESSION_READ_SHARE
   );
+
+  // "Sessao longa/cara" (LONG_SESSION_* acima) - independente da releitura:
+  // extensa demais (mensagens ou tempo na janela de 5h) OU media/mensagem
+  // muito acima da mediana historica (cachedBaseline, ver
+  // refreshSessionBaseline()). Qualquer um dos dois acende snap.godSession,
+  // reaproveitando o mesmo badge/painel de sempre.
+  const cs = snap.currentSession;
+  const avgTokensPerMessage = cs.entryCount > 0 ? cs.totalTokens / cs.entryCount : 0;
+  const sessionDurationMs = cs.earliestMs != null ? Date.now() - cs.earliestMs : 0;
+  const sizeTrigger = cs.entryCount >= LONG_SESSION_MIN_MESSAGES || sessionDurationMs >= LONG_SESSION_MIN_DURATION_MS;
+  const costTrigger = !!(
+    cs.entryCount >= LONG_SESSION_MIN_MESSAGES_FOR_COST &&
+    cachedBaseline &&
+    cachedBaseline.medianAvgTokensPerMessage > 0 &&
+    avgTokensPerMessage >= cachedBaseline.medianAvgTokensPerMessage * LONG_SESSION_COST_MULTIPLIER
+  );
+  snap.longSession = sizeTrigger || costTrigger;
+  snap.godSession = readDominanceTrigger || snap.longSession;
 
   return snap;
 }
@@ -721,8 +829,11 @@ app.whenReady().then(() => {
     ? settings.autoStartEnabled
     : osReportsAutoStart();
   setAutoStart(desiredAutoStart);
+  refreshSessionBaseline();
   pushSnapshot();
   pollTimer = setInterval(pushSnapshot, config.pollIntervalMs);
+  setInterval(refreshSessionBaseline, SESSION_BASELINE_REFRESH_MS);
+  startForegroundWatcher();
   if (auth.isConnected()) pollUsage();
 
   // Watcher dedicado pro attention.json, separado do poll pesado acima.
@@ -745,5 +856,6 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (pollTimer) clearInterval(pollTimer);
+  if (foregroundWatcherProc) foregroundWatcherProc.kill();
   if (process.platform !== 'darwin') app.quit();
 });
