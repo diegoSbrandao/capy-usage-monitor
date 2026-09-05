@@ -55,7 +55,7 @@ const SESSION_BASELINE_REFRESH_MS = 10 * 60 * 1000;
 // limpa o sinal de attention na hora, sem esperar o proximo hook do Claude
 // Code (ver startForegroundWatcher() abaixo). Nomes de processo em
 // minusculo (Get-Process retorna sem ".exe").
-const TERMINAL_PROCESS_NAMES = ['windowsterminal', 'cmd', 'powershell', 'pwsh', 'conhost', 'mintty'];
+const TERMINAL_PROCESS_NAMES = ['windowsterminal', 'cmd', 'powershell', 'pwsh', 'conhost', 'mintty', 'code'];
 
 const FULL_SIZE = { width: 320, height: 648 };
 const COMPACT_SIZE = { width: 210, height: 68 };
