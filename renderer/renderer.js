@@ -608,6 +608,15 @@ sparkEl.addEventListener('click', () => {
   }
 });
 
+sparkEl.addEventListener('dblclick', async () => {
+  if (!lastSnapshot || !lastSnapshot.godSession) return;
+  const result = await window.capyApi.dismissGodSession();
+  if (result.ok) {
+    sparkEl.classList.remove('god-session');
+    spendPanelEl.classList.add('hidden');
+  }
+});
+
 spendCloseBtn.addEventListener('click', () => {
   spendPanelEl.classList.add('hidden');
 });

@@ -252,6 +252,13 @@ let previousResetMsSession = null;
 let justResetSession = false;
 const RESET_JITTER_MARGIN_MS = 60 * 1000;
 
+// Dublo-clique no mascote (ver renderer.js) silencia o alerta de "sessao
+// god" ate a janela de 5h atual (identificada por earliestMs) resetar -
+// guarda so o inicio da janela vigente no momento do dismiss, nunca um
+// timer solto, pra nao engolir um alerta novo e legitimo que apareça
+// ainda dentro da mesma janela.
+let godSessionDismissedWindowStart = null;
+
 function scheduleUsagePoll() {
   clearTimeout(usageTimer);
   if (auth.isConnected()) usageTimer = setTimeout(pollUsage, usageBackoff);
@@ -403,6 +410,9 @@ function buildSnapshot() {
   );
   snap.longSession = sizeTrigger || costTrigger;
   snap.godSession = readDominanceTrigger || snap.longSession;
+  if (godSessionDismissedWindowStart != null && cs.earliestMs === godSessionDismissedWindowStart) {
+    snap.godSession = false;
+  }
 
   return snap;
 }
@@ -699,6 +709,17 @@ ipcMain.handle('usage:openContinueTerminal', () => {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+});
+// So aceita o dismiss se snap.godSession estiver de fato ativo AGORA
+// (recalcula na hora em vez de confiar no snapshot que o renderer tem em
+// maos, que pode estar um poll atrasado) - evita que um duplo-clique
+// "adiantado" (sem alerta na tela ainda) silencie um alerta futuro e
+// legitimo dentro da mesma janela de 5h.
+ipcMain.handle('usage:dismissGodSession', () => {
+  const snap = buildSnapshot();
+  if (!snap.godSession) return { ok: false };
+  godSessionDismissedWindowStart = snap.currentSession.earliestMs;
+  return { ok: true };
 });
 ipcMain.handle('window:hide', () => {
   if (mainWindow) mainWindow.hide();
