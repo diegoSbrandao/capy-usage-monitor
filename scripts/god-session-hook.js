@@ -30,7 +30,7 @@ const WARN_COOLDOWN_MS = 10 * 60 * 1000; // nao repete o aviso a cada prompt, so
 
 // Mesmos valores/logica de LONG_SESSION_* em main.js (widget) - mantenha os
 // dois em sincronia se ajustar um dos lados.
-const LONG_SESSION_MIN_MESSAGES = 40;
+const LONG_SESSION_MIN_MESSAGES = 80;
 const LONG_SESSION_MIN_DURATION_MS = 3 * 60 * 60 * 1000;
 const LONG_SESSION_MIN_MESSAGES_FOR_COST = 8;
 const LONG_SESSION_COST_MULTIPLIER = 1.8;

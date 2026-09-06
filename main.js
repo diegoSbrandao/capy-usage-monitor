@@ -45,7 +45,7 @@ const GOD_SESSION_READ_SHARE = 0.4;
 // mediana historica (cara por mensagem) - qualquer um dos dois basta.
 // GOD_SESSION_MIN_MESSAGES_FOR_COST evita julgar o gatilho de custo com
 // poucas mensagens (media instavel no inicio de qualquer sessao).
-const LONG_SESSION_MIN_MESSAGES = 40;
+const LONG_SESSION_MIN_MESSAGES = 80;
 const LONG_SESSION_MIN_DURATION_MS = 3 * 60 * 60 * 1000;
 const LONG_SESSION_MIN_MESSAGES_FOR_COST = 8;
 const LONG_SESSION_COST_MULTIPLIER = 1.8;
