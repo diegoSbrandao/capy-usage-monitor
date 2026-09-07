@@ -39,14 +39,14 @@ const CACHE_WASTE_HIT_RATIO = 0.5;
 const GOD_SESSION_MIN_TOKENS = 300000;
 const GOD_SESSION_MIN_READS = 6;
 const GOD_SESSION_READ_SHARE = 0.4;
-// "Sessao longa/cara" - trigger independente da releitura (GOD_SESSION_*
-// acima): dispara se a sessao atual (janela de 5h) ja tem mensagens/tempo
-// demais (extensa) OU se a media de tokens/mensagem ja passou muito da
-// mediana historica (cara por mensagem) - qualquer um dos dois basta.
-// GOD_SESSION_MIN_MESSAGES_FOR_COST evita julgar o gatilho de custo com
-// poucas mensagens (media instavel no inicio de qualquer sessao).
-const LONG_SESSION_MIN_MESSAGES = 80;
-const LONG_SESSION_MIN_DURATION_MS = 3 * 60 * 60 * 1000;
+// "Sessao cara" - trigger independente da releitura (GOD_SESSION_* acima):
+// dispara so' quando a media de tokens/mensagem ja passou muito da mediana
+// historica (cara por mensagem de verdade). Contagem crua de
+// mensagens/tempo NAO dispara mais sozinha (uma sessao com muita chamada
+// de ferramenta em sequencia batia o limiar antigo em minutos sem o custo
+// real ter subido - alerta sem sentido). GOD_SESSION_MIN_MESSAGES_FOR_COST
+// evita julgar o gatilho de custo com poucas mensagens (media instavel no
+// inicio de qualquer sessao).
 const LONG_SESSION_MIN_MESSAGES_FOR_COST = 8;
 const LONG_SESSION_COST_MULTIPLIER = 1.8;
 const SESSION_BASELINE_PATH = path.join(DATA_DIR, 'session-baseline.json');
@@ -393,22 +393,21 @@ function buildSnapshot() {
     readDominance.readSharePct >= GOD_SESSION_READ_SHARE
   );
 
-  // "Sessao longa/cara" (LONG_SESSION_* acima) - independente da releitura:
-  // extensa demais (mensagens ou tempo na janela de 5h) OU media/mensagem
-  // muito acima da mediana historica (cachedBaseline, ver
-  // refreshSessionBaseline()). Qualquer um dos dois acende snap.godSession,
-  // reaproveitando o mesmo badge/painel de sempre.
+  // "Sessao cara" (LONG_SESSION_* acima) - independente da releitura: media
+  // de tokens/mensagem ja bem acima da mediana historica (cachedBaseline,
+  // ver refreshSessionBaseline()). So' isso acende snap.godSession - contagem
+  // crua de mensagens/tempo NAO dispara mais sozinha (removido: uma sessao
+  // com muita chamada de ferramenta em sequencia batia 80+ turns em minutos
+  // sem custo real subir, disparando alerta sem sentido).
   const cs = snap.currentSession;
   const avgTokensPerMessage = cs.entryCount > 0 ? cs.totalTokens / cs.entryCount : 0;
-  const sessionDurationMs = cs.earliestMs != null ? Date.now() - cs.earliestMs : 0;
-  const sizeTrigger = cs.entryCount >= LONG_SESSION_MIN_MESSAGES || sessionDurationMs >= LONG_SESSION_MIN_DURATION_MS;
   const costTrigger = !!(
     cs.entryCount >= LONG_SESSION_MIN_MESSAGES_FOR_COST &&
     cachedBaseline &&
     cachedBaseline.medianAvgTokensPerMessage > 0 &&
     avgTokensPerMessage >= cachedBaseline.medianAvgTokensPerMessage * LONG_SESSION_COST_MULTIPLIER
   );
-  snap.longSession = sizeTrigger || costTrigger;
+  snap.longSession = costTrigger;
   snap.godSession = readDominanceTrigger || snap.longSession;
   if (godSessionDismissedWindowStart != null && cs.earliestMs === godSessionDismissedWindowStart) {
     snap.godSession = false;

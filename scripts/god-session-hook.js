@@ -5,8 +5,10 @@
 // dentro deste repo). Avisa DENTRO DO TERMINAL (via additionalContext,
 // mesmo mecanismo usado pelo caveman-mode-tracker.js) quando a sessao
 // atual (o arquivo .jsonl que esse hook recebeu em transcript_path) ja
-// esta "sessao god": extensa demais (muitas mensagens ou tempo) OU cara
-// demais por mensagem (media bem acima da mediana historica). E'
+// esta "sessao cara": media de tokens/mensagem bem acima da mediana
+// historica. Contagem crua de mensagens/tempo NAO dispara mais sozinha -
+// uma sessao com muita chamada de ferramenta em sequencia batia o limiar
+// antigo em minutos sem o custo real ter subido (alerta sem sentido). E'
 // complementar ao badge/painel do widget (ver LONG_SESSION_* em main.js) -
 // mesma logica de gatilho, aplicada aqui a UMA sessao/conversa especifica
 // em vez do agregado de 5h de todos os projetos.
@@ -30,8 +32,6 @@ const WARN_COOLDOWN_MS = 10 * 60 * 1000; // nao repete o aviso a cada prompt, so
 
 // Mesmos valores/logica de LONG_SESSION_* em main.js (widget) - mantenha os
 // dois em sincronia se ajustar um dos lados.
-const LONG_SESSION_MIN_MESSAGES = 80;
-const LONG_SESSION_MIN_DURATION_MS = 3 * 60 * 60 * 1000;
 const LONG_SESSION_MIN_MESSAGES_FOR_COST = 8;
 const LONG_SESSION_COST_MULTIPLIER = 1.8;
 
@@ -93,7 +93,6 @@ process.stdin.on('end', () => {
     if (!summary) return;
 
     const durationMs = Date.now() - summary.startMs;
-    const sizeTrigger = summary.entryCount >= LONG_SESSION_MIN_MESSAGES || durationMs >= LONG_SESSION_MIN_DURATION_MS;
 
     const median = readBaseline();
     const costTrigger = !!(
@@ -102,20 +101,13 @@ process.stdin.on('end', () => {
       summary.avgTokensPerMessage >= median * LONG_SESSION_COST_MULTIPLIER
     );
 
-    if (!sizeTrigger && !costTrigger) return;
+    if (!costTrigger) return;
     if (!shouldWarn(sessionId)) return;
     markWarned(sessionId);
 
-    const reasons = [];
-    if (sizeTrigger) {
-      reasons.push(`${summary.entryCount} mensagens, ${formatDuration(durationMs)} de sessao`);
-    }
-    if (costTrigger) {
-      reasons.push(`media de ${formatTokens(summary.avgTokensPerMessage)} tokens/mensagem (mediana historica: ${formatTokens(median)})`);
-    }
-
     const message =
-      `Aviso: sua sessao esta longa/cara demais (${reasons.join('; ')}). ` +
+      `Aviso: sua sessao esta ficando cara (media de ${formatTokens(summary.avgTokensPerMessage)} tokens/mensagem, ` +
+      `mediana historica: ${formatTokens(median)}; ${summary.entryCount} mensagens, ${formatDuration(durationMs)} de sessao). ` +
       `Recomendo abrir uma sessao nova. Use subagentes pra acelerar tarefas grandes sem inflar o contexto principal.`;
 
     process.stdout.write(JSON.stringify({
